@@ -140,6 +140,15 @@ enum Commands {
         #[arg(short = 'P', long)]
         pack: Option<String>,
 
+        /// Certification level (default: 1)
+        /// L0=raw, L1=+knowledge, L2=+workspace, L3=+tools
+        #[arg(short = 'L', long, default_value = "1")]
+        level: u8,
+
+        /// Path to workspace directory (for level L2+)
+        #[arg(long)]
+        workspace: Option<PathBuf>,
+
         /// Maximum tokens to generate
         #[arg(short = 'n', long, default_value = "100")]
         max_tokens: usize,
@@ -598,8 +607,6 @@ fn run_workspace(action: &WorkspaceAction) -> anyhow::Result<i32> {
 }
 
 fn run_knowledge_build(provider_name: &str, query: &str, output_dir: &Path, json_output: bool) -> anyhow::Result<i32> {
-    use runtime::knowledge_ir;
-
     println!("╔══════════════════════════════════════════╗");
     println!("║     Athenas Knowledge Builder             ║");
     println!("╚══════════════════════════════════════════╝");
@@ -743,6 +750,8 @@ fn run_certify(
     model_path: Option<&Path>,
     capability_name: &str,
     pack_id: Option<&str>,
+    level: u8,
+    workspace_path: Option<&Path>,
     max_tokens: usize,
     server_path: Option<&Path>,
     json_output: bool,
@@ -750,6 +759,10 @@ fn run_certify(
     use runtime::hardware;
     use runtime::Capability;
     use runtime::knowledge;
+
+    if level > 4 {
+        anyhow::bail!("Level must be 0-4. L0=raw, L1=+knowledge, L2=+workspace, L3=+tools, L4=+agent");
+    }
 
     // Resolve capability
     let capability = Capability::from_name(capability_name)
@@ -774,15 +787,53 @@ fn run_certify(
         Capability::LongContext => "Repeat the following sentence: The certification process validates model capabilities and generates structured evidence for engineering decisions. The certification process validates model capabilities and generates structured evidence for engineering decisions."
     };
 
-    // Load knowledge pack if specified
-    let system_prompt = pack_id.and_then(|pid| {
+    // Prepare prompts for each level
+    // L0: Raw prompt
+    let l0_prompt = format!("### Task\n\n{prompt}");
+
+    // L1: + Knowledge pack
+    let l1_system = pack_id.and_then(|pid| {
         let dir = knowledge::default_packs_dir();
         let packs = knowledge::discover_packs(&dir);
         knowledge::find_pack(&packs, pid).map(|p| knowledge::build_system_prompt(p, None))
     });
-    let packed_prompt = match &system_prompt {
-        Some(sp) => format!("{}\n\n### Task\n\n{prompt}", sp),
-        None => prompt.to_string(),
+    let l1_prompt = match &l1_system {
+        Some(sp) => format!("{sp}\n\n### Task\n\n{prompt}"),
+        None => l0_prompt.clone(),
+    };
+
+    // L2: + Workspace
+    let l2_system = workspace_path.and_then(|w| {
+        let config_path = w.join("athenas.json");
+        std::fs::read_to_string(config_path).ok().and_then(|content| {
+            serde_json::from_str::<serde_json::Value>(&content).ok()
+                .and_then(|v| v["system_prompt"].as_str().map(|s| s.to_string()))
+        })
+    });
+    let l2_prompt = match &l2_system {
+        Some(wp) => format!("{wp}\n\n### Task\n\n{prompt}"),
+        None => l1_prompt.clone(),
+    };
+
+    // L3: + Tools (combine knowledge pack + workspace + tool descriptions)
+    // NOTE: .map() MUST be inside the and_then closure to prevent packs from being
+    // dropped before the reference is consumed (borrow-after-drop).
+    let l3_tools = pack_id.and_then(|pid| {
+        let dir = knowledge::default_packs_dir();
+        let packs = knowledge::discover_packs(&dir);
+        knowledge::find_pack(&packs, pid).map(|p| {
+            let tools = knowledge::check_tools(p);
+            let mut desc = String::from("\n## Available Tools\n");
+            for t in &tools {
+                let status = if t.installed { "✓" } else { "✗" };
+                desc.push_str(&format!("- {}: {} ({status})\n", t.name, t.description));
+            }
+            desc
+        })
+    }).unwrap_or_default();
+    let l3_prompt = {
+        let base = l2_system.as_deref().or(l1_system.as_deref()).map(|s| s.to_string()).unwrap_or_default();
+        format!("{}\n{}\n\n### Task\n\n{prompt}", base, l3_tools)
     };
 
     if !json_output {
@@ -793,13 +844,28 @@ fn run_certify(
         println!("🎯 Capability: {}", capability.name());
         println!("📋 Model: {}", info.path);
         println!("📏 Parameters: {:.0}B | Quant: {}", info.parameters_b, info.quantization);
+        println!("📊 Level: L{level}");
         if let Some(pid) = pack_id {
             println!("📦 Pack: {pid}");
+        }
+        if let Some(w) = workspace_path {
+            println!("🏗️  Workspace: {}", w.display());
         }
         println!();
     }
 
-    // Build and start runtime
+    // Build prompt levels. Cap at L3 (4 entries for indices 0-3) since L4+ doesn't exist yet.
+    let max_level = level.min(3);
+    let prompt_levels: Vec<(String, String, String)> = vec![
+        ("L0".to_string(), "Raw".to_string(), l0_prompt),
+        ("L1".to_string(), "+ Knowledge".to_string(), l1_prompt),
+        ("L2".to_string(), "+ Workspace".to_string(), l2_prompt),
+        ("L3".to_string(), "+ Tools".to_string(), l3_prompt),
+    ];
+
+    let active_levels: Vec<&(String, String, String)> = prompt_levels.iter().take((max_level + 1) as usize).collect();
+
+    // Build and start runtime (shared across all levels)
     let mut rt_builder = runtime::LlamaServerRuntime::new();
     if let Some(sp) = server_path {
         rt_builder = rt_builder.with_server_path(sp.to_path_buf());
@@ -813,112 +879,72 @@ fn run_certify(
         println!();
     }
 
-    if let Some(pid) = pack_id {
-        // Pack mode: benchmark raw first, then packed
-        println!("🧪 PHASE 1: Raw (without knowledge pack)");
-        let raw_result = run_benchmark(&rt, prompt, max_tokens)?;
+    let mut results: Vec<(String, String, runtime::InferenceResult)> = Vec::new();
 
-        println!("🧪 PHASE 2: Packed (with knowledge pack '{pid}')");
-        // Reset context by unloading and reloading
-        rt.unload()?;
-        rt.load_model(&model)?;
-        // The first borrow was released after raw_result, so rt is free to borrow mutably
-        let packed_result = run_benchmark(&rt, &packed_prompt, max_tokens)?;
-        rt.unload()?;
-
-        // Calculate improvement
-        let ttft_improvement = if raw_result.ttft_ms > 0.0 {
-            ((raw_result.ttft_ms - packed_result.ttft_ms) / raw_result.ttft_ms * 100.0).round()
-        } else {
-            0.0
-        };
-
-        if json_output {
-            let output = serde_json::json!({
-                "model": info,
-                "hardware": hw,
-                "capability": capability.name(),
-                "pack": pid,
-                "raw": {
-                    "ttft_ms": raw_result.ttft_ms,
-                    "tokens_per_second": raw_result.tokens_per_second,
-                    "total_tokens": raw_result.total_tokens,
-                },
-                "packed": {
-                    "ttft_ms": packed_result.ttft_ms,
-                    "tokens_per_second": packed_result.tokens_per_second,
-                    "total_tokens": packed_result.total_tokens,
-                },
-                "improvement": {
-                    "ttft_ms_pct": ttft_improvement,
-                }
-            });
-            println!("{}", serde_json::to_string_pretty(&output)?);
-        } else {
-            println!();
-            println!("📊 COMPARISON: Raw vs Packed");
-            println!("{}", "─".repeat(60));
-            println!("  Metric               Raw           Packed        Δ");
-            println!("{}", "─".repeat(60));
-            println!("  TTFT (ms)           {:8.1}      {:8.1}      {:>+6}%",
-                raw_result.ttft_ms, packed_result.ttft_ms, ttft_improvement);
-            println!("  Tokens/sec          {:8.1}      {:8.1}",
-                raw_result.tokens_per_second, packed_result.tokens_per_second);
-            println!("  Generated tokens    {:8}       {:8}",
-                raw_result.total_tokens, packed_result.total_tokens);
-            println!("{}", "─".repeat(60));
-            println!();
-            println!("📝 Raw response:");
-            println!("{}", "─".repeat(60));
-            println!("{}", raw_result.text);
-            println!("{}", "─".repeat(60));
-            println!();
-            println!("📝 Packed response:");
-            println!("{}", "─".repeat(60));
-            println!("{}", packed_result.text);
-            println!("{}", "─".repeat(60));
-            println!();
-            println!("{} Certification with pack complete!", "✓".bright_green());
-        }
-    } else {
-        // Standard mode: single benchmark
+    for (level_id, level_name, level_prompt) in &active_levels {
         if !json_output {
-            println!("⚡ Benchmarking...");
-            println!();
+            println!("🧪 {level_id}: {level_name}");
         }
-        let result = run_benchmark(&rt, prompt, max_tokens)?;
-        rt.unload()?;
 
-        let execution = runtime::ExecutionResult {
-            inference: result,
-            hardware: hw,
-            capability,
-            model_path: model.to_string_lossy().to_string(),
-            model_info: info,
-            warnings: Vec::new(),
-            evidence_ref: None,
-        };
+        let result = run_benchmark(&rt, level_prompt, max_tokens)?;
+        results.push((level_id.to_string(), level_name.to_string(), result));
 
-        if json_output {
-            println!("{}", serde_json::to_string_pretty(&execution)?);
-        } else {
-            println!("📊 Certification Results:");
-            println!("  🎯 Capability:  {}", execution.capability.name());
-            println!("  ⏱  TTFT:       {:.1} ms", execution.inference.ttft_ms);
-            println!("  🚀 Throughput:  {:.1} tok/s", execution.inference.tokens_per_second);
-            println!("  📊 Generated:   {} tokens", execution.inference.total_tokens);
-            println!("  💾 Hardware:    {} | {} GB RAM", execution.hardware.cpu.model, execution.hardware.memory.total_gb);
-            if let Some(gpu) = execution.hardware.gpu.first() {
-                println!("  🎮 GPU:         {}", gpu.model);
-            }
-            println!();
-            println!("📝 Response:");
-            println!("{}", "─".repeat(60));
-            println!("{}", execution.inference.text);
-            println!("{}", "─".repeat(60));
-            println!();
-            println!("{} Certification complete!", "✓".bright_green());
+        // Reload model to reset context between levels (except the last)
+        if results.len() < active_levels.len() {
+            rt.unload()?;
+            rt.load_model(&model)?;
         }
+    }
+
+    rt.unload()?;
+
+    if json_output {
+        let output = serde_json::json!({
+            "model": info,
+            "hardware": hw,
+            "capability": capability.name(),
+            "levels": results.iter().map(|(id, name, r)| serde_json::json!({
+                "level": id,
+                "name": name,
+                "ttft_ms": r.ttft_ms,
+                "tokens_per_second": r.tokens_per_second,
+                "total_tokens": r.total_tokens,
+            })).collect::<Vec<_>>(),
+        });
+        println!("{}", serde_json::to_string_pretty(&output)?);
+    } else {
+        println!();
+        println!("📊 CERTIFICATION REPORT — Multi-Level");
+        println!("{}", "═".repeat(70));
+        println!("  {:<6} {:<20} {:>10} {:>14} {:>12}", "Level", "Configuration", "TTFT (ms)", "Tokens/sec", "Tokens");
+        println!("{}", "─".repeat(70));
+
+        let mut prev_ttft: Option<f64> = None;
+        for (level_id, level_name, r) in &results {
+            let delta = match prev_ttft {
+                Some(prev) if prev > 0.0 => {
+                    let change = ((prev - r.ttft_ms) / prev * 100.0).round();
+                    format!(" {:>+5}% ", change)
+                }
+                _ => "  base ".to_string(),
+            };
+            println!("  {:<6} {:<20} {:>8.1}ms {:>7.1}  {:>8}  {}",
+                level_id, level_name, r.ttft_ms, r.tokens_per_second, r.total_tokens, delta);
+            prev_ttft = Some(r.ttft_ms);
+        }
+        println!("{}", "═".repeat(70));
+        println!();
+
+        // Show response from final level
+        if let Some((_, _, final_result)) = results.last() {
+            println!("📝 Response (final level):");
+            println!("{}", "─".repeat(60));
+            println!("{}", final_result.text);
+            println!("{}", "─".repeat(60));
+        }
+
+        println!();
+        println!("{} Multi-level certification complete!", "✓".bright_green());
     }
 
     Ok(0)
@@ -1134,6 +1160,8 @@ fn main() -> anyhow::Result<()> {
             model,
             capability,
             pack,
+            level,
+            workspace,
             max_tokens,
             server_path,
             json,
@@ -1142,6 +1170,8 @@ fn main() -> anyhow::Result<()> {
                 model.as_deref(),
                 capability,
                 pack.as_deref(),
+                *level,
+                workspace.as_deref(),
                 *max_tokens,
                 server_path.as_deref(),
                 *json,

@@ -217,7 +217,7 @@ pub trait KnowledgeProvider {
 /// Compile KnowledgeIR into a KnowledgePack
 pub fn compile_ir_to_pack(ir: KnowledgeIR) -> KnowledgePack {
     let mut knowledge = Vec::new();
-    let mut tools = Vec::new();
+    let tools = Vec::new();
     let mut prompts = HashMap::new();
 
     for item in &ir.items {
