@@ -3,19 +3,18 @@
     "ADR": 1,
     "BOOTSTRAP": 1,
     "CONST": 1,
-    "CONTEXT": 1,
+    "CONTEXT": 5,
     "DIRECTIVE": 1,
     "INDEX": 1
   },
   "errors": 0,
-  "generated_at": "2026-07-16T14:18:42Z",
+  "generated_at": "2026-07-16T14:28:56Z",
   "status_counts": {
-    "Active": 2,
+    "Active": 7,
     "Approved": 1,
-    "Draft": 2,
-    "Unknown": 1
+    "Draft": 2
   },
-  "total_documents": 6,
+  "total_documents": 10,
   "total_relationships": 0,
-  "warnings": 2
+  "warnings": 1
 }

@@ -1,6 +1,6 @@
 ---
 id: ADR-NNNN
-title: [Decision Title]
+title: Architecture Decision Record Template
 author: [Author]
 date: YYYY-MM-DD
 status: Draft

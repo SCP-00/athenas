@@ -30,6 +30,30 @@
     "event": "INDEX-0001 created/updated"
   },
   {
+    "date": "2026-07-16",
+    "id": "CONTEXT-ENG-0001",
+    "title": "Engineering Context",
+    "event": "CONTEXT-ENG-0001 created/updated"
+  },
+  {
+    "date": "2026-07-16",
+    "id": "CONTEXT-REPO-0001",
+    "title": "Repository Context",
+    "event": "CONTEXT-REPO-0001 created/updated"
+  },
+  {
+    "date": "2026-07-16",
+    "id": "CONTEXT-RESEARCH-0001",
+    "title": "Research Context",
+    "event": "CONTEXT-RESEARCH-0001 created/updated"
+  },
+  {
+    "date": "2026-07-16",
+    "id": "CONTEXT-RUNTIME-0001",
+    "title": "Runtime Context",
+    "event": "CONTEXT-RUNTIME-0001 created/updated"
+  },
+  {
     "date": "YYYY-MM-DD",
     "id": "ADR-NNNN",
     "title": "Untitled",

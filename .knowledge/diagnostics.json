@@ -4,11 +4,5 @@
     "id": "ADR-NNNN",
     "message": "Missing optional 'title' field in front-matter",
     "path": "12-ADR/ADR-template.md"
-  },
-  {
-    "severity": "warning",
-    "id": "CONTEXT-2026-07-16",
-    "message": "Missing required 'status' field in front-matter",
-    "path": "CURRENT_CONTEXT.md"
   }
 ]

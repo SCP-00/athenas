@@ -2,6 +2,7 @@
 id: CONTEXT-ENG-0001
 title: Engineering Context
 date: 2026-07-16
+status: Active
 purpose: "Daily engineering status for agents and developers"
 ---
 

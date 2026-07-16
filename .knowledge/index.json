@@ -35,7 +35,7 @@
     "id": "CONTEXT-2026-07-16",
     "title": "Current Context — 2026-07-16",
     "doc_type": "CONTEXT",
-    "status": "Unknown",
+    "status": "Active",
     "path": "CURRENT_CONTEXT.md",
     "snippet": "# Current Context — 2026-07-16\n\n> This file changes daily. It is the first thing after BOOTSTRAP.md that an agent should read.\n\n---\n\n## Project Phase\n\n**Genesis** — Establishing engineering foundation"
   },
@@ -46,5 +46,37 @@
     "status": "Active",
     "path": "knowledge.md",
     "snippet": "# Project Index\n\n> This file is a **living index**. It does not contain explanations — it points to them.\n> Documents are identified by their ID, never by name alone.\n\n---\n\n## What Is Athenas?\n\nAn eng"
+  },
+  {
+    "id": "CONTEXT-ENG-0001",
+    "title": "Engineering Context",
+    "doc_type": "CONTEXT",
+    "status": "Active",
+    "path": "state/context-engineering.md",
+    "snippet": "# Engineering Context\n\n## Status\n\n- **Compiler:** Functional (Rust, v0.1.0)\n- **Validation:** Partial (schemas loaded, templates fail validation — expected)\n- **Knowledge Graph:** Builds successfully "
+  },
+  {
+    "id": "CONTEXT-REPO-0001",
+    "title": "Repository Context",
+    "doc_type": "CONTEXT",
+    "status": "Active",
+    "path": "state/context-repository.md",
+    "snippet": "# Repository Context\n\n## Repository\n\n- **URL:** https://github.com/SCP-00/athenas\n- **Visibility:** Public\n- **Default Branch:** develop\n- **Production Branch:** main\n\n## Branch Structure\n\n- `develop`"
+  },
+  {
+    "id": "CONTEXT-RESEARCH-0001",
+    "title": "Research Context",
+    "doc_type": "CONTEXT",
+    "status": "Active",
+    "path": "state/context-research.md",
+    "snippet": "# Research Context\n\n## Active Topics\n\nNone yet. Research will begin when benchmarks are needed (M2).\n\n## Evidence Library\n\nNo evidence packages collected yet. See `09-Validation/` for the BENCH templa"
+  },
+  {
+    "id": "CONTEXT-RUNTIME-0001",
+    "title": "Runtime Context",
+    "doc_type": "CONTEXT",
+    "status": "Active",
+    "path": "state/context-runtime.md",
+    "snippet": "# Runtime Context\n\n## Status\n\n- **Active Runtime:** None\n- **Configured Providers:** None\n- **Supported Runtimes (target):** llama.cpp, vLLM, MLX, Ollama, OpenAI, Anthropic\n\n## Notes\n\nRuntime interfac"
   }
 ]

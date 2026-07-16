@@ -44,10 +44,10 @@
       "id": "CONTEXT-2026-07-16",
       "title": "Current Context — 2026-07-16",
       "doc_type": "CONTEXT",
-      "status": "Unknown",
+      "status": "Active",
       "authority_level": 8,
       "path": "CURRENT_CONTEXT.md",
-      "hash": "512acf252c3db9691bd32d1e2a415b53430687c4293fc662240ac9affed12c6b",
+      "hash": "004603c997783acdf00c816df97af36de2a4e803f1d46ee12ff7456345dc0bcb",
       "tags": []
     },
     {
@@ -59,26 +59,65 @@
       "path": "knowledge.md",
       "hash": "5bbaba3a3c548266d52db1e857e32964d544eaf961cb5b61849879ae026b78f5",
       "tags": []
+    },
+    {
+      "id": "CONTEXT-ENG-0001",
+      "title": "Engineering Context",
+      "doc_type": "CONTEXT",
+      "status": "Active",
+      "authority_level": 8,
+      "path": "state/context-engineering.md",
+      "hash": "55f291e6fdd65e490c1a67a20888ff205035c083061c5793257c084e078bb9b8",
+      "tags": []
+    },
+    {
+      "id": "CONTEXT-REPO-0001",
+      "title": "Repository Context",
+      "doc_type": "CONTEXT",
+      "status": "Active",
+      "authority_level": 8,
+      "path": "state/context-repository.md",
+      "hash": "c762ae228bcdf5a602354471efffe64faee24d70dfeb386bb9dc7f365693e866",
+      "tags": []
+    },
+    {
+      "id": "CONTEXT-RESEARCH-0001",
+      "title": "Research Context",
+      "doc_type": "CONTEXT",
+      "status": "Active",
+      "authority_level": 8,
+      "path": "state/context-research.md",
+      "hash": "f5cc389b43da106bd72f7f70ba95c89a3ff5b6d102bb92e626f06a1b75536009",
+      "tags": []
+    },
+    {
+      "id": "CONTEXT-RUNTIME-0001",
+      "title": "Runtime Context",
+      "doc_type": "CONTEXT",
+      "status": "Active",
+      "authority_level": 8,
+      "path": "state/context-runtime.md",
+      "hash": "ecf0ea430ef96564198e1ebb79e13ff866cc5cf6d8c3eb13db316d5db1ad304a",
+      "tags": []
     }
   ],
   "edges": [],
   "metadata": {
-    "total_nodes": 6,
+    "total_nodes": 10,
     "total_edges": 0,
     "doc_types": {
       "BOOTSTRAP": 1,
-      "CONTEXT": 1,
+      "CONTEXT": 5,
+      "CONST": 1,
       "INDEX": 1,
-      "DIRECTIVE": 1,
       "ADR": 1,
-      "CONST": 1
+      "DIRECTIVE": 1
     },
     "status_counts": {
-      "Unknown": 1,
-      "Approved": 1,
       "Draft": 2,
-      "Active": 2
+      "Active": 7,
+      "Approved": 1
     },
-    "generated_at": "2026-07-16T14:18:42Z"
+    "generated_at": "2026-07-16T14:28:56Z"
   }
 }

@@ -2,6 +2,7 @@
 id: CONTEXT-RESEARCH-0001
 title: Research Context
 date: 2026-07-16
+status: Active
 purpose: "Active research topics and findings"
 ---
 
