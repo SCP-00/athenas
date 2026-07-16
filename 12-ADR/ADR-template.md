@@ -1,7 +1,7 @@
 ---
 id: ADR-NNNN
 title: Architecture Decision Record Template
-author: [Author]
+author: Author Name
 date: 2026-01-01
 status: Draft
 version: 1.0.0
