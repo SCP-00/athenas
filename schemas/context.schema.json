@@ -6,7 +6,7 @@
   "type": "object",
   "required": ["id", "title", "date", "purpose"],
   "properties": {
-    "id": { "type": "string", "pattern": "^CONTEXT-\\d{4}-\\d{2}-\\d{2}$" },
+    "id": { "type": "string", "pattern": "^CONTEXT-" },
     "title": { "type": "string" },
     "date": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
     "purpose": { "type": "string" }
