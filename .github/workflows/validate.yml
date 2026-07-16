@@ -1,6 +1,6 @@
 # Validate Workflow
-# Pure validation: Markdown lint, YAML, JSON Schema, IDs, references, front-matter.
-# No code compilation, no deployment — just knowledge validation.
+# Pure validation via ath compiler — all intelligence lives in the compiler.
+# GitHub Actions is a thin execution layer for the compiler.
 
 name: Validate
 
@@ -24,130 +24,12 @@ jobs:
       - name: Build ath compiler
         run: cargo build --manifest-path crates/athenas-compiler/Cargo.toml --release
 
-      - name: JSON Schema Validation
+      - name: ath — run all passes (validation, graph, diagnostics)
         run: |
           ./crates/athenas-compiler/target/release/ath
 
-      - name: Validate YAML files
-        run: |
-          python3 << 'PYEOF'
-import yaml, os
-errors = 0
-for root, dirs, files in os.walk('.'):
-    for f in files:
-        if f.endswith(('.yaml', '.yml')) and all(x not in root for x in ['node_modules', '.git', 'target']):
-            try:
-                with open(os.path.join(root, f)) as fh:
-                    yaml.safe_load(fh)
-            except Exception as e:
-                print(f'FAIL: {os.path.join(root, f)}: {e}')
-                errors += 1
-print(f'YAML errors: {errors}')
-PYEOF
-
-      - name: Validate document prefix IDs
-        run: |
-          python3 << 'PYEOF'
-import os, re
-valid = set('CONST VISION REQ SPEC ARCH ADR EXP BENCH MODEL PROFILE CAP TASK TOOL EVID DIRECTIVE INDEX CONTEXT BOOTSTRAP ONT'.split())
-errors = 0
-for root, dirs, files in os.walk('.'):
-    for f in files:
-        if f.endswith('.md') and all(x not in root for x in ['templates', 'node_modules', '.git', 'site']):
-            path = os.path.join(root, f)
-            with open(path) as fh:
-                first_line = fh.readline().strip()
-                if first_line.startswith('# '):
-                    prefix = first_line[2:].split()[0].split('-')[0]
-                    if prefix not in valid:
-                        print(f'UNKNOWN PREFIX: {prefix} in {path}')
-                        errors += 1
-print(f'ID prefix errors: {errors}')
-PYEOF
-
-      - name: Validate YAML front-matter
-        run: |
-          python3 << 'PYEOF'
-import os
-errors = 0
-for root, dirs, files in os.walk('.'):
-    for f in files:
-        if f.endswith('.md') and all(x not in root for x in ['templates', 'node_modules', '.git', 'site']):
-            path = os.path.join(root, f)
-            with open(path) as fh:
-                content = fh.read().strip()
-                if not content.startswith('---'):
-                    print(f'MISSING front-matter: {path}')
-                    errors += 1
-print(f'Front-matter errors: {errors}')
-PYEOF
-
-      - name: Validate reference integrity
-        run: |
-          python3 << 'PYEOF'
-import os, re
-ids = {}
-errors = 0
-for root, dirs, files in os.walk('.'):
-    for f in files:
-        if f.endswith('.md') and all(x not in root for x in ['node_modules', '.git']):
-            path = os.path.join(root, f)
-            with open(path) as fh:
-                m = re.search(r'^id:\s*(\S+)', fh.read(), re.MULTILINE)
-                if m:
-                    ids[m.group(1)] = path
-for root, dirs, files in os.walk('.'):
-    for f in files:
-        if f.endswith('.md') and all(x not in root for x in ['node_modules', '.git']):
-            path = os.path.join(root, f)
-            with open(path) as fh:
-                refs = set(re.findall(r'\b[A-Z]+-\d{4}\b', fh.read()))
-            for ref in refs:
-                if ref not in ids and not ref.startswith('CONTEXT-'):
-                    print(f'BROKEN REF: {ref} in {path}')
-                    errors += 1
-print(f'Reference errors: {errors}')
-PYEOF
-
-      - name: Check for orphan documents
-        run: |
-          python3 << 'PYEOF'
-import os, re
-ids = []
-for root, dirs, files in os.walk('.'):
-    for f in files:
-        if f.endswith('.md') and all(x not in root for x in ['templates', 'node_modules', '.git', 'site']):
-            path = os.path.join(root, f)
-            with open(path) as fh:
-                m = re.search(r'^id:\s*(\S+)', fh.read(), re.MULTILINE)
-                if m:
-                    ids.append((m.group(1), path))
-# Check for circular references (basic)
-print(f'Total documents with IDs: {len(ids)}')
-PYEOF
-
-      - name: Validate ontology
-        run: |
-          python3 << 'PYEOF'
-import yaml
-try:
-    with open('knowledge/ontology.yaml') as f:
-        data = yaml.safe_load(f)
-    print(f'Ontology loaded: {len(data)} terms')
-    for t in data:
-        print(f'  - {t}')
-except FileNotFoundError:
-    print('No ontology.yaml found')
-PYEOF
-
-      - name: Build documentation summary
+      - name: Summary
+        if: always()
         run: |
           echo "## Validation Results" >> $GITHUB_STEP_SUMMARY
-          echo '| ID | Title | Status | Path |' >> $GITHUB_STEP_SUMMARY
-          echo '|---|---|---|---|' >> $GITHUB_STEP_SUMMARY
-          find . -name '*.md' -not -path './node_modules/*' -not -path './.git/*' -not -path './site/*' -not -path './templates/*' | while read f; do
-            id=$(grep -m1 '^id:' "$f" | sed 's/^id: *//')
-            title=$(grep -m1 '^title:' "$f" | sed 's/^title: *//')
-            status=$(grep -m1 '^status:' "$f" | sed 's/^status: *//')
-            [ -n "$id" ] && echo "| $id | $title | $status | $f |" >> $GITHUB_STEP_SUMMARY
-          done
+          echo "Compiler completed successfully." >> $GITHUB_STEP_SUMMARY

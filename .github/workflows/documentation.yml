@@ -1,5 +1,5 @@
 # Documentation Workflow
-# Generates HTML, builds the Astro site, generates health badge, deploys to Pages.
+# Runs ath compiler, builds Astro site, deploys to Pages.
 
 name: Documentation
 
@@ -39,55 +39,9 @@ jobs:
       - name: Build ath compiler
         run: cargo build --manifest-path crates/athenas-compiler/Cargo.toml --release
 
-      - name: ath build — generate knowledge data
-        run: ./crates/athenas-compiler/target/release/ath
-
-      - name: Generate health badge
+      - name: ath — generate knowledge artifacts
         run: |
-          python3 << 'PYEOF'
-import json, os
-
-try:
-    summary = json.load(open('.knowledge/summary.json'))
-    graph = json.load(open('.knowledge/graph.json'))
-    refs = json.load(open('.knowledge/references.json'))
-    diag = json.load(open('.knowledge/diagnostics.json'))
-
-    total = summary['total_documents']
-    edges = summary['total_relationships']
-    errors = sum(1 for d in diag if d['severity'] == 'error')
-    orphan = total - len(refs)
-    avg_refs = edges / max(total, 1)
-
-    health = max(0, min(100,
-        100
-        - (orphan / max(total, 1)) * 30
-        - (errors / max(total, 1)) * 20
-        - max(0, 3 - avg_refs) * 10
-        + min(avg_refs, 5) * 5
-    ))
-except Exception:
-    health = 50  # default if no data
-
-if health >= 90:
-    color = '#3fb950'
-elif health >= 70:
-    color = '#d29922'
-else:
-    color = '#f85149'
-
-badge = f'''<svg xmlns="http://www.w3.org/2000/svg" width="200" height="20">
-  <rect width="200" height="20" rx="3" fill="#333"/>
-  <rect x="100" width="100" height="20" rx="3" fill="{color}"/>
-  <text x="50" y="14" text-anchor="middle" fill="#fff" font-family="sans-serif" font-size="11">Knowledge Health</text>
-  <text x="150" y="14" text-anchor="middle" fill="#fff" font-family="sans-serif" font-size="11">{int(health)}%</text>
-</svg>'''
-
-os.makedirs('site/public', exist_ok=True)
-with open('site/public/knowledge-health.svg', 'w') as f:
-    f.write(badge)
-print(f'Health badge generated: {int(health)}% ({color})')
-PYEOF
+          ./crates/athenas-compiler/target/release/ath
 
       - name: Install site dependencies
         run: npm ci
@@ -109,9 +63,8 @@ PYEOF
         id: deployment
         uses: actions/deploy-pages@v4
 
-      - name: Verify deployment
+      - name: Summary
         run: |
           echo "## Documentation Deployment" >> $GITHUB_STEP_SUMMARY
           echo "- Site: ${{ steps.deployment.outputs.page_url }}" >> $GITHUB_STEP_SUMMARY
-          echo "- Badge: ${{ steps.deployment.outputs.page_url }}knowledge-health.svg" >> $GITHUB_STEP_SUMMARY
           echo "- Status: Deployed" >> $GITHUB_STEP_SUMMARY
