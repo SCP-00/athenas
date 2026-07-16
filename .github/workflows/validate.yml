@@ -26,8 +26,7 @@ jobs:
 
       - name: JSON Schema Validation
         run: |
-          ./crates/athenas-compiler/target/release/ath 2>&1 || true
-          echo "Schema validation complete"
+          ./crates/athenas-compiler/target/release/ath
 
       - name: Validate YAML files
         run: |

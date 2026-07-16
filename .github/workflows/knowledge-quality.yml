@@ -133,8 +133,16 @@ for k, v in m.items():
     print(f'- **{k.replace(chr(95), chr(32)).title()}:** {v}')
 " >> $GITHUB_STEP_SUMMARY
 
+      - name: Publish badge to site
+        run: |
+          mkdir -p site/public
+          cp .metrics/badge/health.svg site/public/knowledge-health.svg
+          echo "Badge published to site/public/knowledge-health.svg"
+
       - name: Upload metrics artifact
         uses: actions/upload-artifact@v4
         with:
           name: knowledge-quality
-          path: .metrics/
+          path: |
+            .metrics/
+            site/public/knowledge-health.svg
