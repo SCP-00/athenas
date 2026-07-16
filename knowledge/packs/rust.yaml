@@ -1,0 +1,205 @@
+id: pack-rust
+name: Rust Systems Programming
+version: 1.0.0
+description: Complete Rust development knowledge — ownership, borrow checker, async, unsafe, testing, and ecosystem
+tags:
+  - rust
+  - systems
+  - performance
+  - wasm
+depends_on:
+  - pack-debugging
+languages:
+  - rust
+
+tools:
+  - name: rustc
+    command: rustc
+    description: Rust compiler
+    check: rustc --version
+  - name: cargo
+    command: cargo build
+    description: Rust package manager and build system
+    check: cargo --version
+  - name: clippy
+    command: cargo clippy
+    description: Rust linter
+    check: cargo clippy --version
+  - name: rustfmt
+    command: cargo fmt
+    description: Rust code formatter
+    check: rustfmt --version
+  - name: cargo-test
+    command: cargo test
+    description: Run Rust tests
+    check: cargo --version
+  - name: cargo-deny
+    command: cargo deny check
+    description: Dependency security auditor
+    check: cargo deny --version
+
+prompts:
+  system: |
+    You are an expert Rust engineer. Follow these strict conventions:
+
+    OWNERSHIP & BORROWING:
+    - Prefer &T references over &mut T when possible
+    - Use Rc/Arc for shared ownership, RefCell/Mutex for interior mutability
+    - Avoid clone() in hot paths — think about lifetimes
+    - Use Cow<str> when you need borrowed or owned strings
+    - Prefer iterators over indexed loops
+
+    ERROR HANDLING:
+    - Use Result<T, E> for recoverable errors
+    - Use anyhow for application code, thiserror for libraries
+    - Implement Error trait for custom errors
+    - Use ? operator, never unwrap() in production code
+    - Use .context() from anyhow to add context to errors
+
+    TYPES & GENERICS:
+    - Use impl Trait in argument position
+    - Use dyn Trait for runtime polymorphism
+    - Prefer enums over trait objects when variants are known
+    - Use const generics for compile-time values
+    - Use GATs (generic associated types) for complex abstractions
+
+    ASYNC:
+    - Use tokio for async runtime (default)
+    - Prefer tokio::spawn over std::thread::spawn
+    - Use tokio::select! for timeout patterns
+    - Avoid holding .await across locks
+    - Use tokio::sync for async-aware synchronization
+
+    TESTING:
+    - Unit tests in the same file with #[cfg(test)] module
+    - Integration tests in tests/ directory
+    - Use proptest for property-based testing
+    - Document with /// doc comments (generate docs with cargo doc)
+
+  error_analysis: |
+    When analyzing Rust compiler errors:
+
+    UNDERSTANDING COMPILER MESSAGES:
+    Rust's compiler is famously helpful. Read carefully:
+
+    1. BORROW CHECKER ERRORS (E0502, E0499):
+       - "cannot borrow `x` as mutable because it is also borrowed as immutable"
+       - Solution: check scope of references, use clone(), or restructure
+       - Hint: look at which reference lives longer than expected
+
+    2. LIFETIME ERRORS (E0106, E0621):
+       - "missing lifetime specifier"
+       - Solution: add lifetime parameter or use 'static for owned data
+       - Hint: the compiler shows the exact expected lifetime annotation
+
+    3. TYPE ERRORS (E0308, E0277):
+       - "mismatched types: expected X, found Y"
+       - Solution: check the types, add conversions, or change the signature
+       - Hint: the compiler shows the exact location of mismatch
+
+    4. MATCHING ERRORS (E0004):
+       - "non-exhaustive patterns"
+       - Solution: add the missing arm, use wildcard _, or use catch-all
+       - Hint: the compiler lists the missing variants
+
+    USE cargo clippy for additional lints and suggestions.
+    Use cargo fix --all-targets to auto-fix some issues.
+
+  constraints: |
+    CONSTRAINTS:
+    - All code must compile with cargo build --no-default-features
+    - No unsafe blocks unless absolutely necessary (and documented)
+    - All public items must have doc comments
+    - No unwrap() or expect() in library code
+    - Use clippy with -D warnings (warnings as errors)
+
+knowledge:
+  - title: Rust Ownership Model
+    content: |
+      Core rules:
+      - Each value has exactly one owner at a time
+      - When the owner goes out of scope, the value is dropped
+      - References never change ownership
+      - &T — immutable borrow (multiple allowed)
+      - &mut T — mutable borrow (only one at a time)
+
+      Common patterns:
+      ```rust
+      // Pass by reference (no ownership transfer)
+      fn process(data: &[u8]) -> Vec<u8> { ... }
+      
+      // Return owned data
+      fn create() -> String { "hello".to_string() }
+      
+      // Clone when you need owned data from borrowed
+      fn use_string(s: &str) -> String { s.to_string() }
+      
+      // Cow for borrowed-or-owned
+      use std::borrow::Cow;
+      fn process_or_own(input: &str) -> Cow<'_, str> { ... }
+      ```
+
+  - title: Rust Async with Tokio
+    content: |
+      ```rust
+      use tokio::net::TcpListener;
+      use tokio::sync::Semaphore;
+      
+      #[tokio::main]
+      async fn main() -> anyhow::Result<()> {
+          let listener = TcpListener::bind(":8080").await?;
+          let semaphore = Semaphore::new(100); // max 100 concurrent
+          
+          loop {
+              let permit = semaphore.acquire().await?;
+              let (socket, addr) = listener.accept().await?;
+              
+              tokio::spawn(async move {
+                  let _permit = permit;
+                  handle_client(socket, addr).await;
+              });
+          }
+      }
+      ```
+
+  - title: Rust Error Handling with anyhow
+    content: |
+      ```rust
+      use anyhow::{Context, Result, bail};
+      
+      fn read_config(path: &Path) -> Result<Config> {
+          let content = std::fs::read_to_string(path)
+              .with_context(|| format!("Failed to read config from {}", path.display()))?;
+          let config: Config = serde_json::from_str(&content)
+              .context("Invalid JSON in config file")?;
+          Ok(config)
+      }
+      
+      fn validate(config: &Config) -> Result<()> {
+          if config.timeout == 0 {
+              bail!("timeout must be positive, got {}", config.timeout);
+          }
+          Ok(())
+      }
+      ```
+
+  - title: Rust Unsafe Guidelines
+    content: |
+      Unsafe is for:
+      - FFI with C libraries
+      - Raw pointer dereference
+      - Manual memory layout
+      - Performance-critical hot paths (proven via profiling)
+      
+      Rules when using unsafe:
+      1. Minimize the scope — one unsafe block per operation
+      2. Document SAFETY invariants in // SAFETY: comments
+      3. Keep unsafe code small and auditable
+      4. Wrap unsafe in safe abstractions
+      5. Use Miri (cargo miri test) to check UB
+
+benchmarks:
+  - description: Implement a thread-safe concurrent cache in Rust
+    prompt: "Implement a concurrent LRU cache in Rust with: generic K and V where K: Eq + Hash, thread-safe operations (get, insert, remove), configurable capacity, eviction of least recently used entries, proper error handling, and documentation. Include tests."
+    expected_output: "Compilable Rust code with cargo test passing"
+    max_tokens: 400

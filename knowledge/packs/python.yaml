@@ -1,0 +1,170 @@
+id: pack-python
+name: Python Engineering
+version: 1.0.0
+description: Complete Python development knowledge — toolchain, testing, typing, async, packaging, and best practices
+tags:
+  - python
+  - data-science
+  - backend
+depends_on: []
+languages:
+  - python
+
+tools:
+  - name: python-interpreter
+    command: python3
+    description: Python 3 interpreter
+    check: python3 --version
+  - name: pytest
+    command: python3 -m pytest
+    description: Python testing framework
+    check: python3 -m pytest --version
+  - name: mypy
+    command: python3 -m mypy
+    description: Static type checker for Python
+    check: python3 -m mypy --version
+  - name: ruff-linter
+    command: ruff check
+    description: Fast Python linter
+    check: ruff version
+  - name: black-formatter
+    command: black --check
+    description: Python code formatter
+    check: black --version
+  - name: pip
+    command: pip install
+    description: Python package manager
+    check: pip --version
+
+prompts:
+  system: |
+    You are an expert Python engineer. Follow these strict conventions:
+
+    CODE STYLE:
+    - Follow PEP 8 strictly (use black formatter)
+    - Use type hints for all public APIs
+    - Write docstrings in Google style
+    - Prefer dataclasses over plain dicts
+    - Use pathlib over os.path
+
+    TYPING:
+    - Use typing module (List, Dict, Optional, Union)
+    - Use Protocol for structural subtyping
+    - Use TypeVar for generics
+    - Use Literal for constrained values
+    - Annotate __init__ returns as None
+
+    ERROR HANDLING:
+    - Use specific exception types
+    - Create custom exceptions inheriting from Exception
+    - Use try/except with narrow scope
+    - Prefer "ask for forgiveness" (EAFP) pattern
+
+    ASYNC:
+    - Use asyncio for I/O-bound operations
+    - Use httpx or aiohttp for HTTP
+    - Use anyio for cross-platform async
+    - Always await or create_task
+
+    TESTING:
+    - Use pytest with fixtures
+    - Parametrize tests with @pytest.mark.parametrize
+    - Use pytest-asyncio for async tests
+    - Use unittest.mock or pytest-mock
+
+  error_analysis: |
+    When analyzing Python errors:
+
+    1. READ the full traceback — Python shows the exact call chain
+    2. Identify error type:
+       - SyntaxError: missing colon, indentation, unmatched brackets
+       - ImportError: missing module, circular import
+       - TypeError: wrong argument types
+       - AttributeError: method doesn't exist on object
+       - KeyError/IndexError: missing dict key or list index
+       - ValueError: wrong value for function
+    3. Check indentation carefully — Python is whitespace-sensitive
+    4. Verify type hints match actual usage
+    5. Run the file with python3 -c "compile(...)" before declaring it working
+
+  constraints: |
+    CONSTRAINTS:
+    - All functions must have type annotations
+    - All public functions must have Google-style docstrings
+    - Use pathlib, not os.path
+    - Prefer async/await over threading
+    - Code must pass mypy --strict
+
+knowledge:
+  - title: Python Project Structure
+    content: |
+      Modern Python project layout:
+      ```
+      project/
+        src/
+          mypackage/
+            __init__.py
+            core.py
+            models.py
+        tests/
+          test_core.py
+          conftest.py
+        pyproject.toml
+        README.md
+      ```
+      
+      pyproject.toml (modern config):
+      ```toml
+      [build-system]
+      requires = ["setuptools>=68"]
+      build-backend = "setuptools.backends._legacy:_Backend"
+      
+      [project]
+      name = "mypackage"
+      version = "0.1.0"
+      requires-python = ">=3.11"
+      ```
+
+  - title: Python Async Patterns
+    content: |
+      Correct async patterns:
+      ```python
+      import asyncio
+      import httpx
+      
+      async def fetch(url: str) -> dict:
+          async with httpx.AsyncClient() as client:
+              resp = await client.get(url)
+              resp.raise_for_status()
+              return resp.json()
+      
+      async def main() -> list[dict]:
+          urls = ["https://api.example.com/1", "https://api.example.com/2"]
+          tasks = [fetch(url) for url in urls]
+          return await asyncio.gather(*tasks)
+      ```
+
+  - title: Python Testing with Pytest
+    content: |
+      ```python
+      import pytest
+      from mypackage import Calculator
+      
+      @pytest.fixture
+      def calc() -> Calculator:
+          return Calculator()
+      
+      @pytest.mark.parametrize("a,b,expected", [
+          (1, 2, 3),
+          (-1, 1, 0),
+          (0.1, 0.2, 0.3),  # Note: floating point
+      ])
+      def test_add(calc: Calculator, a: float, b: float, expected: float) -> None:
+          assert calc.add(a, b) == pytest.approx(expected)
+      ```
+
+benchmarks:
+  - description: Write a Python async API client with retry logic and type hints
+    prompt: "Write a Python async API client class that: uses httpx, includes retry logic with exponential backoff, has full type hints, uses dataclasses for responses, includes proper error handling with custom exceptions, and has a test file using pytest-asyncio with mocking."
+    expected_output: "Type-checked Python code with complete tests"
+    max_tokens: 400

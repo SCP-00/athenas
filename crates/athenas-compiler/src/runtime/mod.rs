@@ -1,4 +1,5 @@
 pub mod hardware;
+pub mod knowledge;
 
 use std::io::{Read, Write};
 use std::net::TcpStream;

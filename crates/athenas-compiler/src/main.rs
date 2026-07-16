@@ -12,6 +12,34 @@ use std::time::Instant;
 
 use runtime::{InferenceParams, Runtime};
 
+/// Subcommands for `ath pack`
+#[derive(Subcommand, Debug)]
+enum PackAction {
+    /// List all available knowledge packs
+    List,
+    /// Show details of a specific pack
+    Show {
+        /// Pack ID to show
+        id: String,
+    },
+}
+
+/// Subcommands for `ath workspace`
+#[derive(Subcommand, Debug)]
+enum WorkspaceAction {
+    /// List all available workspaces
+    List,
+    /// Create a new workspace from a pack
+    Create {
+        /// Pack ID to create workspace from
+        pack_id: String,
+
+        /// Output directory
+        #[arg(short, long, default_value = ".")]
+        output: PathBuf,
+    },
+}
+
 /// Athenas Knowledge Compiler — compiles engineering documentation into structured knowledge artifacts
 #[derive(Parser, Debug)]
 #[command(
@@ -66,6 +94,10 @@ enum Commands {
         #[arg(short, long)]
         prompt: Option<String>,
 
+        /// Path to a workspace directory (loads prompt from athenas.json)
+        #[arg(short = 'w', long)]
+        workspace: Option<PathBuf>,
+
         /// Maximum tokens to generate (default: 512)
         #[arg(short = 'n', long, default_value = "512")]
         max_tokens: usize,
@@ -104,6 +136,10 @@ enum Commands {
         #[arg(short, long, default_value = "text-generation")]
         capability: String,
 
+        /// Knowledge pack ID to benchmark WITH (compares raw vs packed)
+        #[arg(short = 'P', long)]
+        pack: Option<String>,
+
         /// Maximum tokens to generate
         #[arg(short = 'n', long, default_value = "100")]
         max_tokens: usize,
@@ -115,6 +151,28 @@ enum Commands {
         /// Output structured JSON instead of human-readable format
         #[arg(short, long)]
         json: bool,
+    },
+
+    /// List and inspect knowledge packs
+    Pack {
+        /// Subcommand: list, show
+        #[command(subcommand)]
+        action: PackAction,
+
+        /// Path to packs directory (defaults to knowledge/packs/)
+        #[arg(short, long)]
+        packs_dir: Option<PathBuf>,
+
+        /// Output JSON
+        #[arg(short, long)]
+        json: bool,
+    },
+
+    /// Create or manage engineering workspaces
+    Workspace {
+        /// Action: create, list, show
+        #[command(subcommand)]
+        action: WorkspaceAction,
     },
 
     /// Full pipeline: validate + graph + all artifacts (project.yaml, index, search, crossrefs)
@@ -344,6 +402,184 @@ fn run_build(root: &Path, output_dir: &Path, schemas_dir: &Path, _verbose: bool)
     Ok(0)
 }
 
+fn run_pack(action: &PackAction, packs_dir: Option<&Path>, json_output: bool) -> anyhow::Result<i32> {
+    let dir = packs_dir
+        .map(|p| p.to_path_buf())
+        .unwrap_or_else(runtime::knowledge::default_packs_dir);
+
+    let packs = runtime::knowledge::discover_packs(&dir);
+
+    match action {
+        PackAction::List => {
+            if json_output {
+                println!("{}", serde_json::to_string_pretty(&packs)?);
+            } else {
+                println!("╔══════════════════════════════════════════╗");
+                println!("║        Athenas Knowledge Packs           ║");
+                println!("╚══════════════════════════════════════════╝");
+                println!();
+                if packs.is_empty() {
+                    println!("  No knowledge packs found in: {}", dir.display());
+                    println!("  Create YAML files in knowledge/packs/ to add packs.");
+                } else {
+                    for pack in &packs {
+                        let tools_count = pack.tools.len();
+                        let knowledge_count = pack.knowledge.len();
+                        println!("  📦 {} (v{})", pack.name, pack.version);
+                        println!("     ID: {}", pack.id);
+                        println!("     {}", pack.description);
+                        println!("     Languages: {} | Tools: {} | Knowledge items: {}",
+                            pack.languages.join(", "), tools_count, knowledge_count);
+                        if !pack.depends_on.is_empty() {
+                            println!("     Depends on: {}", pack.depends_on.join(", "));
+                        }
+                        println!();
+                    }
+                }
+            }
+        }
+        PackAction::Show { id } => {
+            let pack = runtime::knowledge::find_pack(&packs, id)
+                .ok_or_else(|| anyhow::anyhow!("Pack '{id}' not found"))?;
+
+            let tools = runtime::knowledge::check_tools(pack);
+            let installed_count = tools.iter().filter(|t| t.installed).count();
+            let total_tools = tools.len();
+
+            if json_output {
+                let output = serde_json::json!({
+                    "pack": pack,
+                    "tools_status": tools,
+                    "installed": installed_count,
+                    "total_tools": total_tools,
+                });
+                println!("{}", serde_json::to_string_pretty(&output)?);
+            } else {
+                println!("╔══════════════════════════════════════════╗");
+                println!("║        Pack Details                       ║");
+                println!("╚══════════════════════════════════════════╝");
+                println!();
+                println!("  📦 {} (v{})", pack.name, pack.version);
+                println!("     ID: {}", pack.id);
+                println!("     {}", pack.description);
+                println!("     Languages: {}", pack.languages.join(", "));
+                if !pack.depends_on.is_empty() {
+                    println!("     Depends on: {}", pack.depends_on.join(", "));
+                }
+                println!();
+
+                // Tools
+                println!("  🔧 Tools ({installed_count}/{total_tools} installed):");
+                for tool in &tools {
+                    let status = if tool.installed {
+                        format!("✓ {}", tool.version.as_deref().unwrap_or("installed"))
+                    } else {
+                        "✗ not found".to_string()
+                    };
+                    println!("     {} — {} ({status})", tool.name, tool.description);
+                }
+                println!();
+
+                // Knowledge items
+                println!("  📚 Knowledge items:");
+                for item in &pack.knowledge {
+                    println!("     - {}", item.title);
+                }
+                println!();
+
+                // Benchmarks
+                if !pack.benchmarks.is_empty() {
+                    println!("  🏋️  Benchmarks:");
+                    for b in &pack.benchmarks {
+                        println!("     - {} ({})", b.description, b.max_tokens);
+                    }
+                    println!();
+                }
+
+                // System prompt preview
+                if let Some(system) = pack.prompts.get("system") {
+                    let preview: String = system.chars().take(200).collect();
+                    println!("  🧠 System prompt (preview):");
+                    println!("     {preview}...");
+                    println!();
+                }
+            }
+        }
+    }
+
+    Ok(0)
+}
+
+fn run_workspace(action: &WorkspaceAction) -> anyhow::Result<i32> {
+    match action {
+        WorkspaceAction::List => {
+            let packs_dir = runtime::knowledge::default_packs_dir();
+            let packs = runtime::knowledge::discover_packs(&packs_dir);
+            println!("╔══════════════════════════════════════════╗");
+            println!("║      Athenas Workspaces                   ║");
+            println!("╚══════════════════════════════════════════╝");
+            println!();
+            println!("  Available workspaces (from knowledge packs):");
+            println!();
+            for pack in &packs {
+                println!("  🏗️  {} ({})", pack.name, pack.id);
+                println!("     $ ath workspace create {}", pack.id);
+                println!();
+            }
+            println!("  Create a workspace: ath workspace create <pack-id>");
+        }
+        WorkspaceAction::Create { pack_id, output } => {
+            let packs_dir = runtime::knowledge::default_packs_dir();
+            let packs = runtime::knowledge::discover_packs(&packs_dir);
+            let pack = runtime::knowledge::find_pack(&packs, pack_id)
+                .ok_or_else(|| anyhow::anyhow!("Pack '{pack_id}' not found"))?;
+
+            let workspace_dir = output.join(format!("workspace-{}", pack_id));
+            std::fs::create_dir_all(&workspace_dir)?;
+
+            // Generate workspace config
+            let tools = runtime::knowledge::check_tools(pack);
+            let config = serde_json::json!({
+                "workspace": {
+                    "name": format!("{} Workspace", pack.name),
+                    "pack": pack.id,
+                    "pack_version": pack.version,
+                    "languages": pack.languages,
+                },
+                "tools": tools.iter().map(|t| serde_json::json!({
+                    "name": t.name,
+                    "command": t.command,
+                    "installed": t.installed,
+                    "version": t.version,
+                })).collect::<Vec<_>>(),
+                "model_config": {
+                    "temperature": 0.7,
+                    "max_tokens": 2048,
+                },
+                "system_prompt": runtime::knowledge::build_system_prompt(pack, None),
+            });
+
+            let config_path = workspace_dir.join("athenas.json");
+            std::fs::write(&config_path, serde_json::to_string_pretty(&config)?)?;
+
+            println!("╔══════════════════════════════════════════╗");
+            println!("║        Workspace Created                  ║");
+            println!("╚══════════════════════════════════════════╝");
+            println!();
+            println!("  🏗️  Workspace: {}", workspace_dir.display());
+            println!("  📦 Pack: {} (v{})", pack.name, pack.version);
+            println!("  🔧 Tools available: {}", tools.iter().filter(|t| t.installed).count());
+            println!();
+            println!("  Config: {}", config_path.display());
+            println!("  To use: cd {} && ath run", workspace_dir.display());
+            println!();
+            println!("  The workspace contains the full system prompt with");
+            println!("  domain knowledge for {}. Edit athenas.json to customize.", pack.languages.join(", "));
+        }
+    }
+    Ok(0)
+}
+
 fn run_doctor(json_output: bool) -> anyhow::Result<i32> {
     use runtime::hardware;
     use runtime::Capability;
@@ -409,15 +645,25 @@ fn run_doctor(json_output: bool) -> anyhow::Result<i32> {
     Ok(0)
 }
 
+fn run_benchmark(rt: &impl Runtime, prompt: &str, max_tokens: usize) -> anyhow::Result<runtime::InferenceResult> {
+    let params = InferenceParams {
+        max_tokens,
+        ..Default::default()
+    };
+    rt.complete(prompt, &params)
+}
+
 fn run_certify(
     model_path: Option<&Path>,
     capability_name: &str,
+    pack_id: Option<&str>,
     max_tokens: usize,
     server_path: Option<&Path>,
     json_output: bool,
 ) -> anyhow::Result<i32> {
     use runtime::hardware;
     use runtime::Capability;
+    use runtime::knowledge;
 
     // Resolve capability
     let capability = Capability::from_name(capability_name)
@@ -442,6 +688,17 @@ fn run_certify(
         Capability::LongContext => "Repeat the following sentence: The certification process validates model capabilities and generates structured evidence for engineering decisions. The certification process validates model capabilities and generates structured evidence for engineering decisions."
     };
 
+    // Load knowledge pack if specified
+    let system_prompt = pack_id.and_then(|pid| {
+        let dir = knowledge::default_packs_dir();
+        let packs = knowledge::discover_packs(&dir);
+        knowledge::find_pack(&packs, pid).map(|p| knowledge::build_system_prompt(p, None))
+    });
+    let packed_prompt = match &system_prompt {
+        Some(sp) => format!("{}\n\n### Task\n\n{prompt}", sp),
+        None => prompt.to_string(),
+    };
+
     if !json_output {
         println!("╔══════════════════════════════════════════╗");
         println!("║     Athenas Certification v0.1.0         ║");
@@ -450,6 +707,9 @@ fn run_certify(
         println!("🎯 Capability: {}", capability.name());
         println!("📋 Model: {}", info.path);
         println!("📏 Parameters: {:.0}B | Quant: {}", info.parameters_b, info.quantization);
+        if let Some(pid) = pack_id {
+            println!("📦 Pack: {pid}");
+        }
         println!();
     }
 
@@ -462,52 +722,117 @@ fn run_certify(
 
     let load_start = Instant::now();
     rt.load_model(&model)?;
-    let load_time = load_start.elapsed();
-
     if !json_output {
-        println!("⏱  Loaded in {:.1}s", load_time.as_secs_f64());
-        println!("⚡ Benchmarking...");
+        println!("⏱  Model loaded in {:.1}s", load_start.elapsed().as_secs_f64());
         println!();
     }
 
-    // Run inference
-    let params = InferenceParams {
-        max_tokens,
-        ..Default::default()
-    };
+    if let Some(pid) = pack_id {
+        // Pack mode: benchmark raw first, then packed
+        println!("🧪 PHASE 1: Raw (without knowledge pack)");
+        let raw_result = run_benchmark(&rt, prompt, max_tokens)?;
 
-    let result = rt.complete(prompt, &params)?;
-    rt.unload()?;
+        println!("🧪 PHASE 2: Packed (with knowledge pack '{pid}')");
+        // Reset context by unloading and reloading
+        rt.unload()?;
+        rt.load_model(&model)?;
+        // The first borrow was released after raw_result, so rt is free to borrow mutably
+        let packed_result = run_benchmark(&rt, &packed_prompt, max_tokens)?;
+        rt.unload()?;
 
-    let execution = runtime::ExecutionResult {
-        inference: result,
-        hardware: hw,
-        capability,
-        model_path: model.to_string_lossy().to_string(),
-        model_info: info,
-        warnings: Vec::new(),
-        evidence_ref: None,
-    };
+        // Calculate improvement
+        let ttft_improvement = if raw_result.ttft_ms > 0.0 {
+            ((raw_result.ttft_ms - packed_result.ttft_ms) / raw_result.ttft_ms * 100.0).round()
+        } else {
+            0.0
+        };
 
-    if json_output {
-        println!("{}", serde_json::to_string_pretty(&execution)?);
-    } else {
-        println!("📊 Certification Results:");
-        println!("  🎯 Capability:  {}", execution.capability.name());
-        println!("  ⏱  TTFT:       {:.1} ms", execution.inference.ttft_ms);
-        println!("  🚀 Throughput:  {:.1} tok/s", execution.inference.tokens_per_second);
-        println!("  📊 Generated:   {} tokens", execution.inference.total_tokens);
-        println!("  💾 Hardware:    {} | {} GB RAM", execution.hardware.cpu.model, execution.hardware.memory.total_gb);
-        if let Some(gpu) = execution.hardware.gpu.first() {
-            println!("  🎮 GPU:         {}", gpu.model);
+        if json_output {
+            let output = serde_json::json!({
+                "model": info,
+                "hardware": hw,
+                "capability": capability.name(),
+                "pack": pid,
+                "raw": {
+                    "ttft_ms": raw_result.ttft_ms,
+                    "tokens_per_second": raw_result.tokens_per_second,
+                    "total_tokens": raw_result.total_tokens,
+                },
+                "packed": {
+                    "ttft_ms": packed_result.ttft_ms,
+                    "tokens_per_second": packed_result.tokens_per_second,
+                    "total_tokens": packed_result.total_tokens,
+                },
+                "improvement": {
+                    "ttft_ms_pct": ttft_improvement,
+                }
+            });
+            println!("{}", serde_json::to_string_pretty(&output)?);
+        } else {
+            println!();
+            println!("📊 COMPARISON: Raw vs Packed");
+            println!("{}", "─".repeat(60));
+            println!("  Metric               Raw           Packed        Δ");
+            println!("{}", "─".repeat(60));
+            println!("  TTFT (ms)           {:8.1}      {:8.1}      {:>+6}%",
+                raw_result.ttft_ms, packed_result.ttft_ms, ttft_improvement);
+            println!("  Tokens/sec          {:8.1}      {:8.1}",
+                raw_result.tokens_per_second, packed_result.tokens_per_second);
+            println!("  Generated tokens    {:8}       {:8}",
+                raw_result.total_tokens, packed_result.total_tokens);
+            println!("{}", "─".repeat(60));
+            println!();
+            println!("📝 Raw response:");
+            println!("{}", "─".repeat(60));
+            println!("{}", raw_result.text);
+            println!("{}", "─".repeat(60));
+            println!();
+            println!("📝 Packed response:");
+            println!("{}", "─".repeat(60));
+            println!("{}", packed_result.text);
+            println!("{}", "─".repeat(60));
+            println!();
+            println!("{} Certification with pack complete!", "✓".bright_green());
         }
-        println!();
-        println!("📝 Response:");
-        println!("{}", "─".repeat(60));
-        println!("{}", execution.inference.text);
-        println!("{}", "─".repeat(60));
-        println!();
-        println!("{} Certification complete!", "✓".bright_green());
+    } else {
+        // Standard mode: single benchmark
+        if !json_output {
+            println!("⚡ Benchmarking...");
+            println!();
+        }
+        let result = run_benchmark(&rt, prompt, max_tokens)?;
+        rt.unload()?;
+
+        let execution = runtime::ExecutionResult {
+            inference: result,
+            hardware: hw,
+            capability,
+            model_path: model.to_string_lossy().to_string(),
+            model_info: info,
+            warnings: Vec::new(),
+            evidence_ref: None,
+        };
+
+        if json_output {
+            println!("{}", serde_json::to_string_pretty(&execution)?);
+        } else {
+            println!("📊 Certification Results:");
+            println!("  🎯 Capability:  {}", execution.capability.name());
+            println!("  ⏱  TTFT:       {:.1} ms", execution.inference.ttft_ms);
+            println!("  🚀 Throughput:  {:.1} tok/s", execution.inference.tokens_per_second);
+            println!("  📊 Generated:   {} tokens", execution.inference.total_tokens);
+            println!("  💾 Hardware:    {} | {} GB RAM", execution.hardware.cpu.model, execution.hardware.memory.total_gb);
+            if let Some(gpu) = execution.hardware.gpu.first() {
+                println!("  🎮 GPU:         {}", gpu.model);
+            }
+            println!();
+            println!("📝 Response:");
+            println!("{}", "─".repeat(60));
+            println!("{}", execution.inference.text);
+            println!("{}", "─".repeat(60));
+            println!();
+            println!("{} Certification complete!", "✓".bright_green());
+        }
     }
 
     Ok(0)
@@ -516,6 +841,7 @@ fn run_certify(
 fn run_inference(
     model_path: Option<&Path>,
     prompt: Option<&str>,
+    workspace: Option<&Path>,
     max_tokens: usize,
     temperature: f64,
     json_output: bool,
@@ -527,10 +853,33 @@ fn run_inference(
     let model = runtime::find_model(model_path)?;
     let info = runtime::infer_model_info(&model, None);
 
-    // Read prompt
-    let prompt_text = match prompt {
-        Some(p) => p.to_string(),
-        None => {
+    // Check for workspace config first
+    let workspace_prompt = workspace.and_then(|w| {
+        let config_path = w.join("athenas.json");
+        if config_path.exists() {
+            std::fs::read_to_string(&config_path).ok().and_then(|content| {
+                serde_json::from_str::<serde_json::Value>(&content).ok()
+                    .and_then(|v| v["system_prompt"].as_str().map(|s| s.to_string()))
+            })
+        } else {
+            None
+        }
+    });
+
+    // Read prompt: workspace > cli arg > stdin
+    let prompt_text = match (workspace_prompt, prompt) {
+        (Some(wp), None) => {
+            if !json_output {
+                println!("  📖 Using system prompt from workspace ({} chars)", wp.len());
+            }
+            wp
+        }
+        (Some(wp), Some(user_prompt)) => {
+            // Combine workspace system prompt with user prompt
+            format!("{}\n\n### User Request\n\n{user_prompt}", wp)
+        }
+        (None, Some(p)) => p.to_string(),
+        (None, None) => {
             let mut buf = String::new();
             std::io::stdin().read_to_string(&mut buf)?;
             buf
@@ -634,6 +983,7 @@ fn main() -> anyhow::Result<()> {
         Some(Commands::Run {
             model,
             prompt,
+            workspace,
             max_tokens,
             temperature,
             json,
@@ -643,6 +993,7 @@ fn main() -> anyhow::Result<()> {
             let exit_code = run_inference(
                 model.as_deref(),
                 prompt.as_deref(),
+                workspace.as_deref(),
                 *max_tokens,
                 *temperature,
                 *json,
@@ -669,9 +1020,24 @@ fn main() -> anyhow::Result<()> {
             std::process::exit(exit_code);
         }
 
+        Some(Commands::Pack {
+            action,
+            packs_dir,
+            json,
+        }) => {
+            let exit_code = run_pack(action, packs_dir.as_deref(), *json)?;
+            std::process::exit(exit_code);
+        }
+
+        Some(Commands::Workspace { action }) => {
+            let exit_code = run_workspace(action)?;
+            std::process::exit(exit_code);
+        }
+
         Some(Commands::Certify {
             model,
             capability,
+            pack,
             max_tokens,
             server_path,
             json,
@@ -679,6 +1045,7 @@ fn main() -> anyhow::Result<()> {
             let exit_code = run_certify(
                 model.as_deref(),
                 capability,
+                pack.as_deref(),
                 *max_tokens,
                 server_path.as_deref(),
                 *json,

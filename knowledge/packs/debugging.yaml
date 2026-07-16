@@ -1,0 +1,178 @@
+id: pack-debugging
+name: Debugging & Troubleshooting
+version: 1.0.0
+description: Universal debugging strategies, error analysis patterns, and troubleshooting methodology — works with any language or runtime
+tags:
+  - debugging
+  - troubleshooting
+  - error-analysis
+  - universal
+depends_on: []
+languages:
+  - "*"
+
+tools:
+  - name: gdb
+    command: gdb
+    description: GNU Debugger for C/C++/Rust programs
+    check: gdb --version
+  - name: lldb
+    command: lldb
+    description: LLVM Debugger
+    check: lldb --version
+  - name: strace
+    command: strace
+    description: System call tracer for Linux
+    check: strace -V
+  - name: valgrind
+    command: valgrind
+    description: Memory debugger and profiler
+    check: valgrind --version
+  - name: perf
+    command: perf
+    description: Linux profiling tool
+    check: perf --version
+  - name: htop
+    command: htop
+    description: Interactive process viewer
+    check: htop --version
+
+prompts:
+  system: |
+    You are an expert debugger and systems troubleshooter. Follow this universal debugging methodology:
+
+    PHASE 1 — REPRODUCE
+    Before analyzing, ensure you can reproduce the issue reliably.
+    - What are the exact steps?
+    - Does it happen consistently or intermittently?
+    - What changed recently (code, dependencies, environment)?
+    - Can you isolate the minimal reproduction case?
+
+    PHASE 2 — DIAGNOSE
+    Use these diagnostic tools in order:
+    - Read the error message — it often tells you exactly what's wrong
+    - Check logs (application, system, kernel)
+    - Inspect the state at the point of failure
+    - Add targeted logging/tracing
+    - Use a debugger to step through the failing path
+
+    PHASE 3 — HYPOTHESIZE
+    Form a hypothesis BEFORE making changes:
+    - What is the root cause (not the symptom)?
+    - What evidence supports this hypothesis?
+    - What would disprove it?
+    - What is the simplest fix?
+
+    PHASE 4 — VERIFY
+    After applying the fix:
+    - Does it solve the original issue?
+    - Does it introduce new issues?
+    - Can you prove the root cause was addressed?
+    - Add a regression test
+
+  error_analysis: |
+    ERROR CLASSIFICATION FRAMEWORK:
+
+    1. COMPILATION ERRORS
+       - Syntax: typo, missing delimiter, wrong keyword
+       - Type: wrong type passed, missing interface implementation
+       - Linker: undefined symbol, wrong library path
+       Resolution: Read the error from bottom to top
+
+    2. RUNTIME ERRORS
+       - Null/panic: null pointer dereference, nil access
+       - Memory: segfault, buffer overflow, use-after-free
+       - Resource: file not found, permission denied, out of memory
+       Resolution: Check the stack trace, inspect variable state
+
+    3. LOGIC ERRORS
+       - Off-by-one: loop boundary off by one
+       - Race condition: unsynchronized access
+       - State corruption: unexpected mutation
+       Resolution: Add assertions, check invariants
+
+    4. PERFORMANCE
+       - CPU: hot loop, unnecessary allocation
+       - Memory: leak, excessive allocation, fragmentation
+       - I/O: blocking call, too many syscalls
+       Resolution: Profile first, optimize second
+
+    MEMORY DEBUGGING (Linux):
+    - Use valgrind: valgrind --leak-check=full ./program
+    - Use AddressSanitizer: compile with -fsanitize=address
+    - Use strace: strace -f -e trace=memory ./program
+    - Check /proc/meminfo and /proc/$(pidof program)/smaps
+
+  constraints: |
+    CONSTRAINTS:
+    - Always reproduce before diagnosing
+    - Always hypothesize before changing code
+    - One change at a time — verify after each
+    - Never deploy a fix without a regression test
+    - Document the root cause and resolution
+
+knowledge:
+  - title: Systematic Debugging with GDB
+    content: |
+      Essential GDB commands:
+      ```
+      gdb ./program          — start debugging
+      run <args>             — run with arguments
+      bt                     — backtrace (call stack)
+      frame <n>              — switch to frame n
+      info locals            — show local variables
+      list                   — show source code
+      break file.c:42        — set breakpoint
+      watch var              — watch variable for changes
+      print var              — print variable value
+      next                   — step over
+      step                   — step into
+      continue               — continue execution
+      finish                 — return from function
+      ```
+
+  - title: Common Debugging Patterns
+    content: |
+      BINARY SEARCH DEBUGGING:
+      When facing a complex bug, isolate it by binary search:
+      1. Comment out half the code
+      2. Does the bug still occur?
+      3. If yes, repeat with the other half
+      4. If no, the bug is in the commented half
+
+      RASHOMON EFFECT:
+      When two components each believe the other is wrong:
+      1. Check the data at the boundary between them
+      2. Log the exact data being passed
+      3. Compare what A sent vs what B received
+      4. The mismatch reveals the bug
+
+      HEISENBUG PATTERN:
+      When adding a print statement fixes the bug:
+      1. It's likely a timing/race condition
+      2. Use thread sanitizers instead of prints
+      3. Check for uninitialized memory
+
+  - title: Linux Debugging Arsenal
+    content: |
+      Performance analysis (USE method):
+      - Utilization: how busy is each resource?
+      - Saturation: is there queuing/backlog?
+      - Errors: are there error counts rising?
+
+      Tools per resource:
+      CPU: top, htop, mpstat, perf top
+      Memory: free, vmstat, /proc/meminfo
+      Disk: iostat, iotop, dstat
+      Network: netstat, ss, tcpdump, nethogs
+      System calls: strace, ltrace
+
+benchmarks:
+  - description: Debug a memory leak in C program
+    prompt: "Given a C program that allocates memory in a loop but never frees it, describe step by step how to: 1) Identify the leak, 2) Find the exact allocation site, 3) Fix the leak, 4) Verify the fix. Include the valgrind commands and expected output patterns."
+    expected_output: "Complete debugging methodology with commands and analysis"
+    max_tokens: 300
+  - description: Debug a segfault with GDB
+    prompt: "Explain the exact GDB commands and methodology to debug a segmentation fault. Include: how to get the exact line where it crashes, how to inspect variables at the crash point, how to get a full backtrace, how to examine memory, and how to set watchpoints. Provide example output for each step."
+    expected_output: "Working GDB workflow for segfault analysis"
+    max_tokens: 300
