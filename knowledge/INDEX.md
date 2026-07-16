@@ -1,5 +1,5 @@
 ---
-id: INDEX-SUB-0001
+id: INDEX-0002
 title: Knowledge Directory Index
 date: 2026-07-16
 status: Active

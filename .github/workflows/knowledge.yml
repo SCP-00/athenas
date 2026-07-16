@@ -23,9 +23,9 @@ jobs:
       - name: Build ath compiler
         run: cargo build --manifest-path crates/athenas-compiler/Cargo.toml --release
 
-      - name: ath — compile knowledge artifacts
+      - name: ath graph — build knowledge graph
         run: |
-          ./crates/athenas-compiler/target/release/ath
+          ./crates/athenas-compiler/target/release/ath graph
 
       - name: Verify artifacts
         run: |

@@ -15,15 +15,19 @@ pub fn load_schemas(schemas_dir: &Path) -> Result<SchemaMap> {
 
     let schema_files = [
         ("CONST", "const.schema.json"),
+        ("VISION", "vision.schema.json"),
+        ("COMPILER", "compiler.schema.json"),
         ("REQ", "req.schema.json"),
         ("SPEC", "spec.schema.json"),
         ("ARCH", "arch.schema.json"),
         ("ADR", "adr.schema.json"),
         ("BENCH", "bench.schema.json"),
+        ("EVID", "evid.schema.json"),
         ("DIRECTIVE", "directive.schema.json"),
         ("INDEX", "index.schema.json"),
         ("CONTEXT", "context.schema.json"),
         ("BOOTSTRAP", "bootstrap.schema.json"),
+        ("ONT", "ont.schema.json"),
     ];
 
     for (doc_type, filename) in &schema_files {

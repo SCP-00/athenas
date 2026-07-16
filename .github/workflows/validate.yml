@@ -1,6 +1,6 @@
 # Validate Workflow
-# Pure validation via ath compiler — all intelligence lives in the compiler.
-# GitHub Actions is a thin execution layer for the compiler.
+# Pure validation via ath validate subcommand.
+# All intelligence lives in the compiler.
 
 name: Validate
 
@@ -24,12 +24,12 @@ jobs:
       - name: Build ath compiler
         run: cargo build --manifest-path crates/athenas-compiler/Cargo.toml --release
 
-      - name: ath — run all passes (validation, graph, diagnostics)
+      - name: ath validate — schema, IDs, references, diagnostics, exit code
         run: |
-          ./crates/athenas-compiler/target/release/ath
+          ./crates/athenas-compiler/target/release/ath validate
 
       - name: Summary
         if: always()
         run: |
           echo "## Validation Results" >> $GITHUB_STEP_SUMMARY
-          echo "Compiler completed successfully." >> $GITHUB_STEP_SUMMARY
+          echo "Compiler validation completed via \`ath validate\`." >> $GITHUB_STEP_SUMMARY

@@ -8,21 +8,20 @@ version: 0.1.0
 authority: Level 3 — Specification
 completion: 30
 missing_sections:
-  - Pass 8–12 (future: HTML, Search, PDF, LLM Context, Graph DB)
-  - CLI error code specifications
+  - "Pass 8-12 (future: HTML, Search, PDF, LLM Context, Graph DB)"
+  - "CLI error code specifications"
 review_status: Pending
 implements:
-  - CONST-0001: "Article VI — Knowledge Graph automation"
-elaborates_on:
-  - ONT-0024: "Compiler entity definition"
-depends_on: []
+  - CONST-0001
+depends_on:
+  - CONST-0001
 validated_by: []
 derived_from:
-  - ARCH-idea: "Chatty's architectural vision for knowledge compilation"
+  - VISION-0001
 supersedes: []
 related:
-  - knowledge/ontology.yaml: "Compiler validates against ontology"
-  - crates/athenas-compiler/: "Rust implementation"
+  - VISION-0001
+  - INDEX-0002
 tags:
   - compiler
   - architecture
@@ -258,13 +257,18 @@ All generated JSON files follow consistent schemas for consumption by the Astro 
 ## CLI Interface
 
 ```bash
-ath build         # Run full pipeline (Pass 1-7)
-ath validate      # Run Pass 1-3 only (fast validation)
-ath graph         # Run Pass 1-6, output knowledge graph
-ath doctor        # Run all passes, show diagnostics
-ath search        # Run Pass 1-7, search the index
-ath stats         # Show aggregate statistics
-ath check         # Run Pass 1-6, exit with error code if issues found
+ath build         # Full pipeline: validate + graph + all artifacts
+ath validate      # Parse, validate schemas, check IDs, check references, print diagnostics
+ath graph         # Build knowledge graph, output graph.json only
+```
+
+### Future Subcommands (planned)
+
+```bash
+ath doctor        # All passes + full diagnostics report
+ath search        # Full-text search over the knowledge index
+ath stats         # Aggregate statistics and health metrics
+ath check         # CI-friendly mode: validate + exit with error code
 ```
 
 ---

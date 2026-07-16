@@ -17,9 +17,9 @@ validated_by: []
 derived_from: []
 supersedes: []
 related:
-  - VISION-0001: "Foundation for all Athenas activity"
-  - DIRECTIVE-0001: "Operationalizes engineering principles"
-  - BOOTSTRAP-0001: "Entry point for all contributors"
+  - VISION-0001
+  - DIRECTIVE-0001
+  - BOOTSTRAP-0001
 ---
 
 # CONST-0001 — The Athenas Constitution
