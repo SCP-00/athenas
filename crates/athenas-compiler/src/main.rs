@@ -10,6 +10,7 @@ use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 
+use runtime::benchmark::BenchmarkRegistry;
 use runtime::{InferenceParams, Runtime};
 
 /// Subcommands for `ath pack`
@@ -135,6 +136,10 @@ enum Commands {
         /// Capability to benchmark (default: text-generation)
         #[arg(short, long, default_value = "text-generation")]
         capability: String,
+
+        /// Benchmark runner ID (e.g., "human-eval"). Uses capability mode if omitted.
+        #[arg(short = 'B', long)]
+        benchmark: Option<String>,
 
         /// Knowledge pack ID to benchmark WITH (compares raw vs packed)
         #[arg(short = 'P', long)]
@@ -1159,6 +1164,7 @@ fn main() -> anyhow::Result<()> {
         Some(Commands::Certify {
             model,
             capability,
+            benchmark,
             pack,
             level,
             workspace,
@@ -1166,17 +1172,54 @@ fn main() -> anyhow::Result<()> {
             server_path,
             json,
         }) => {
-            let exit_code = run_certify(
-                model.as_deref(),
-                capability,
-                pack.as_deref(),
-                *level,
-                workspace.as_deref(),
-                *max_tokens,
-                server_path.as_deref(),
-                *json,
-            )?;
-            std::process::exit(exit_code);
+            // Build benchmark registry with available runners
+            let mut registry = BenchmarkRegistry::new();
+            registry.register(Box::new(runtime::benchmarks::human_eval::HumanEvalRunner::new()));
+
+            if let Some(benchmark_id) = benchmark {
+                // Warn if capability is also set (it's ignored in benchmark mode)
+                if *capability != "text-generation" {
+                    eprintln!("  ⚠ --capability is ignored when --benchmark is set\n");
+                }
+
+                // Benchmark Engine mode — use a registered benchmark runner
+                let runner = registry
+                    .get(benchmark_id)
+                    .ok_or_else(|| anyhow::anyhow!(
+                        "Unknown benchmark '{benchmark_id}'. Available: {:?}",
+                        registry.list()
+                    ))?;
+
+                let model = model.as_deref().ok_or_else(|| {
+                    anyhow::anyhow!("Model path required for benchmark certification. Use --model <path>")
+                })?;
+
+                let _report = runtime::benchmark::run_benchmark_certify(
+                    runner,
+                    *level,
+                    pack.as_deref(),
+                    workspace.as_deref(),
+                    *max_tokens,
+                    model,
+                    server_path.as_deref(),
+                    *json,
+                )?;
+
+                std::process::exit(0);
+            } else {
+                // Legacy capability mode — backward compatible
+                let exit_code = run_certify(
+                    model.as_deref(),
+                    "text-generation",
+                    pack.as_deref(),
+                    *level,
+                    workspace.as_deref(),
+                    *max_tokens,
+                    server_path.as_deref(),
+                    *json,
+                )?;
+                std::process::exit(exit_code);
+            }
         }
 
         Some(Commands::Build { project_root, output, schemas, verbose }) => {

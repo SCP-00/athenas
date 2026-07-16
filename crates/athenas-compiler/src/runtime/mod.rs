@@ -1,3 +1,5 @@
+pub mod benchmark;
+pub mod benchmarks;
 pub mod hardware;
 pub mod knowledge;
 pub mod knowledge_ir;
@@ -460,6 +462,15 @@ pub fn find_model(override_path: Option<&Path>) -> anyhow::Result<PathBuf> {
          Searched: {:?}",
         candidates
     )
+}
+
+/// Convenience wrapper: run inference with InferenceParams built from max_tokens
+pub fn run_benchmark(rt: &impl Runtime, prompt: &str, max_tokens: usize) -> anyhow::Result<InferenceResult> {
+    let params = InferenceParams {
+        max_tokens,
+        ..Default::default()
+    };
+    rt.complete(prompt, &params)
 }
 
 /// Find ALL GGUF models in common directories (recursive, for doctor/certify)
