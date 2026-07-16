@@ -1,5 +1,5 @@
 ---
-id: ADR-NNNN
+id: ADR-0000
 title: Architecture Decision Record Template
 author: Author Name
 date: 2026-01-01
