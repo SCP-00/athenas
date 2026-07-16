@@ -107,10 +107,10 @@
     "total_edges": 0,
     "doc_types": {
       "CONST": 1,
-      "BOOTSTRAP": 1,
       "INDEX": 1,
-      "CONTEXT": 5,
       "DIRECTIVE": 1,
+      "BOOTSTRAP": 1,
+      "CONTEXT": 5,
       "ADR": 1
     },
     "status_counts": {
@@ -118,6 +118,6 @@
       "Approved": 1,
       "Active": 7
     },
-    "generated_at": "2026-07-16T14:29:19Z"
+    "generated_at": "2026-07-16T14:38:53Z"
   }
 }

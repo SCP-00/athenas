@@ -1,0 +1,57 @@
+# Knowledge Workflow
+# Builds the knowledge graph, search index, ontology, and statistics.
+# This is the central workflow of Athenas — it compiles knowledge, not code.
+
+name: Knowledge
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [develop]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: stable
+
+      - name: Build ath compiler
+        run: cargo build --manifest-path crates/athenas-compiler/Cargo.toml --release
+
+      - name: ath build — Knowledge Graph
+        run: ./crates/athenas-compiler/target/release/ath
+
+      - name: Verify knowledge artifacts
+        run: |
+          for f in graph.json index.json timeline.json decisions.json diagnostics.json references.json ontology.json summary.json; do
+            if [ -f ".knowledge/$f" ]; then
+              size=$(wc -c < ".knowledge/$f")
+              echo "  ✓ $f ($size bytes)"
+            else
+              echo "  ✗ MISSING: $f"
+              exit 1
+            fi
+          done
+
+      - name: Validate ontology integrity
+        run: |
+          TERMS=$(python3 -c "import json; d=json.load(open('.knowledge/ontology.json')); print(len(d))" 2>/dev/null || echo "0")
+          echo "Ontology terms: $TERMS"
+          echo "## Knowledge Build" >> $GITHUB_STEP_SUMMARY
+          echo "- Graph nodes: $(python3 -c "import json; d=json.load(open('.knowledge/graph.json')); print(d['metadata']['total_nodes'])" 2>/dev/null || echo 'N/A')" >> $GITHUB_STEP_SUMMARY
+          echo "- Graph edges: $(python3 -c "import json; d=json.load(open('.knowledge/graph.json')); print(d['metadata']['total_edges'])" 2>/dev/null || echo 'N/A')" >> $GITHUB_STEP_SUMMARY
+          echo "- Documents: $(python3 -c "import json; d=json.load(open('.knowledge/summary.json')); print(d['total_documents'])" 2>/dev/null || echo 'N/A')" >> $GITHUB_STEP_SUMMARY
+          echo "- Ontology terms: $TERMS" >> $GITHUB_STEP_SUMMARY
+          echo "- Diagnostics: $(python3 -c "import json; d=json.load(open('.knowledge/summary.json')); print(d['warnings'] + d['errors'])" 2>/dev/null || echo 'N/A')" >> $GITHUB_STEP_SUMMARY
+
+      - name: Upload knowledge artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: knowledge
+          path: .knowledge/

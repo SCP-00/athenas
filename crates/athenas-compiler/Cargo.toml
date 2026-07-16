@@ -6,7 +6,7 @@ description = "Athenas Knowledge Compiler — compiles engineering documentation
 authors = ["SCP-00"]
 
 [[bin]]
-name = "athenas"
+name = "ath"
 path = "src/main.rs"
 
 [dependencies]

@@ -4,7 +4,7 @@ title: How Athenas Must Be Developed
 author: Chief Software Architect
 date: 2026-07-16
 status: Approved
-version: 1.0
+version: 1.0.0
 authority: Level 3 — Engineering
 supersedes: []
 ---

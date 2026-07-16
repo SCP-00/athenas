@@ -1,0 +1,140 @@
+# Knowledge Quality Workflow
+# Calculates coverage, orphan percentage, average references, dead documents,
+# and generates a knowledge health badge.
+
+name: Knowledge Quality
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '0 6 * * 1'  # Every Monday at 06:00 UTC
+  workflow_dispatch:
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: stable
+
+      - name: Build and run compiler
+        run: |
+          cargo build --manifest-path crates/athenas-compiler/Cargo.toml --release
+          ./crates/athenas-compiler/target/release/ath
+
+      - name: Calculate knowledge metrics
+        id: metrics
+        run: |
+          python3 << 'PYEOF'
+import json, os
+
+# Load knowledge artifacts
+graph = json.load(open('.knowledge/graph.json'))
+index = json.load(open('.knowledge/index.json'))
+summary = json.load(open('.knowledge/summary.json'))
+refs = json.load(open('.knowledge/references.json'))
+diag = json.load(open('.knowledge/diagnostics.json'))
+
+# Metrics
+total_docs = summary['total_documents']
+total_edges = summary['total_relationships']
+types_count = len(summary['document_types'])
+
+# Orphan documents (documents with no relationships)
+orphan_count = total_docs - len(refs)
+
+# Average references per document
+avg_refs = total_edges / total_docs if total_docs > 0 else 0
+
+# Dead documents (referenced but don't exist)
+dead = sum(1 for d in diag if d['severity'] == 'error')
+
+# Health score (simple heuristic)
+coverage = (total_edges / (total_docs * 3)) * 100  # max 3 refs per doc ideal
+health = max(0, min(100,
+    100  # base
+    - (orphan_count / max(total_docs, 1)) * 30  # penalty for orphans
+    - (dead / max(total_docs, 1)) * 20  # penalty for dead refs
+    - max(0, 3 - avg_refs) * 10  # penalty for low connectivity
+    + min(avg_refs, 5) * 5  # bonus for good connectivity
+))
+
+# Write metrics
+metrics = {
+    'total_documents': total_docs,
+    'total_relationships': total_edges,
+    'document_types': types_count,
+    'orphan_documents': orphan_count,
+    'orphan_percentage': round(orphan_count / max(total_docs, 1) * 100, 1),
+    'average_references': round(avg_refs, 2),
+    'dead_references': dead,
+    'coverage_percentage': round(coverage, 1),
+    'health_score': round(health, 1),
+    'warnings': summary.get('warnings', 0),
+    'errors': summary.get('errors', 0),
+}
+
+os.makedirs('.metrics', exist_ok=True)
+with open('.metrics/knowledge-quality.json', 'w') as f:
+    json.dump(metrics, f, indent=2)
+
+# Print
+for k, v in metrics.items():
+    print(f'{k}: {v}')
+PYEOF
+
+      - name: Generate health badge
+        run: |
+          SCORE=$(python3 -c "import json; print(json.load(open('.metrics/knowledge-quality.json'))['health_score'])")
+          COLOR="green"
+          if (( $(echo "$SCORE < 70" | bc -l) )); then COLOR="red"
+          elif (( $(echo "$SCORE < 90" | bc -l) )); then COLOR="yellow"
+          fi
+          echo "Health score: $SCORE ($COLOR)"
+
+          # Generate SVG badge
+          mkdir -p .metrics/badge
+          python3 << 'BADGEEOF'
+import json
+
+with open('.metrics/knowledge-quality.json') as f:
+    m = json.load(f)
+
+score = m['health_score']
+if score >= 90:
+    color = '#3fb950'
+elif score >= 70:
+    color = '#d29922'
+else:
+    color = '#f85149'
+
+badge = f'''<svg xmlns="http://www.w3.org/2000/svg" width="200" height="20">
+  <rect width="200" height="20" rx="3" fill="#333"/>
+  <rect x="100" width="100" height="20" rx="3" fill="{color}"/>
+  <text x="50" y="14" text-anchor="middle" fill="#fff" font-family="sans-serif" font-size="11">Knowledge Health</text>
+  <text x="150" y="14" text-anchor="middle" fill="#fff" font-family="sans-serif" font-size="11">{score}%</text>
+</svg>'''
+
+with open('.metrics/badge/health.svg', 'w') as f:
+    f.write(badge)
+print(f'Badge generated: {score}% ({color})')
+BADGEEOF
+
+          echo "## Knowledge Quality Report" >> $GITHUB_STEP_SUMMARY
+          python3 -c "
+import json
+m = json.load(open('.metrics/knowledge-quality.json'))
+for k, v in m.items():
+    print(f'- **{k.replace(chr(95), chr(32)).title()}:** {v}')
+" >> $GITHUB_STEP_SUMMARY
+
+      - name: Upload metrics artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: knowledge-quality
+          path: .metrics/
