@@ -2,7 +2,7 @@
 id: ADR-NNNN
 title: Architecture Decision Record Template
 author: [Author]
-date: YYYY-MM-DD
+date: 2026-01-01
 status: Draft
 version: 1.0.0
 authority: Level 4 — Architecture
