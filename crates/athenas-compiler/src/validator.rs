@@ -28,6 +28,8 @@ pub fn load_schemas(schemas_dir: &Path) -> Result<SchemaMap> {
         ("CONTEXT", "context.schema.json"),
         ("BOOTSTRAP", "bootstrap.schema.json"),
         ("ONT", "ont.schema.json"),
+        ("MODEL", "model.schema.json"),
+        ("PROFILE", "profile.schema.json"),
     ];
 
     for (doc_type, filename) in &schema_files {

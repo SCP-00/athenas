@@ -1,11 +1,16 @@
 mod generators;
 mod graph;
 mod parser;
+mod runtime;
 mod validator;
 
 use clap::{Parser, Subcommand};
 use colored::*;
+use std::io::Read;
 use std::path::{Path, PathBuf};
+use std::time::Instant;
+
+use runtime::{InferenceParams, Runtime};
 
 /// Athenas Knowledge Compiler — compiles engineering documentation into structured knowledge artifacts
 #[derive(Parser, Debug)]
@@ -45,6 +50,37 @@ enum Commands {
         /// Output directory for generated JSON files (defaults to .knowledge/)
         #[arg(short, long, default_value = ".knowledge")]
         output: PathBuf,
+
+        /// Verbose output
+        #[arg(short, long)]
+        verbose: bool,
+    },
+
+    /// Run inference against a local model via llama.cpp
+    Run {
+        /// Path to the GGUF model file (auto-detect if omitted)
+        #[arg(short, long)]
+        model: Option<PathBuf>,
+
+        /// Input prompt (reads from stdin if omitted)
+        #[arg(short, long)]
+        prompt: Option<String>,
+
+        /// Maximum tokens to generate (default: 512)
+        #[arg(short = 'n', long, default_value = "512")]
+        max_tokens: usize,
+
+        /// Temperature (default: 0.7)
+        #[arg(short, long, default_value = "0.7")]
+        temperature: f64,
+
+        /// Output structured JSON instead of human-readable format
+        #[arg(short, long)]
+        json: bool,
+
+        /// Path to llama-server binary (default: llama-server in PATH)
+        #[arg(long)]
+        server_path: Option<PathBuf>,
 
         /// Verbose output
         #[arg(short, long)]
@@ -278,12 +314,145 @@ fn run_build(root: &Path, output_dir: &Path, schemas_dir: &Path, _verbose: bool)
     Ok(0)
 }
 
+fn run_inference(
+    model_path: Option<&Path>,
+    prompt: Option<&str>,
+    max_tokens: usize,
+    temperature: f64,
+    json_output: bool,
+    server_path: Option<&Path>,
+    _verbose: bool,
+) -> anyhow::Result<i32> {
+
+    // Resolve model
+    let model = runtime::find_model(model_path)?;
+    let info = runtime::infer_model_info(&model);
+
+    // Read prompt
+    let prompt_text = match prompt {
+        Some(p) => p.to_string(),
+        None => {
+            let mut buf = String::new();
+            std::io::stdin().read_to_string(&mut buf)?;
+            buf
+        }
+    };
+
+    if prompt_text.trim().is_empty() {
+        anyhow::bail!("No prompt provided. Use --prompt or pipe input via stdin.");
+    }
+
+    // Build runtime with optional custom server path
+    let mut rt_builder = runtime::LlamaServerRuntime::new();
+    if let Some(sp) = server_path {
+        rt_builder = rt_builder.with_server_path(sp.to_path_buf());
+    }
+
+    if !json_output {
+        println!("╔══════════════════════════════════════════╗");
+        println!("║     Athenas Runtime v0.1.0 — Spike       ║");
+        println!("╚══════════════════════════════════════════╝");
+        println!();
+        println!("📋 Model: {}", info.path);
+        println!("📏 Parameters: {:.0}B | Quant: {} | Context: {}",
+            info.parameters_b, info.quantization, info.context_length);
+        println!("💬 Prompt: {} chars", prompt_text.len());
+        println!("🎯 Max tokens: {} | Temperature: {}", max_tokens, temperature);
+        println!();
+    }
+
+    // Start runtime
+    let mut rt = rt_builder;
+    let load_start = Instant::now();
+    rt.load_model(&model)?;
+    let load_time = load_start.elapsed();
+
+    if !json_output {
+        println!();
+        println!("⏱  Model loaded in {:.1}s", load_time.as_secs_f64());
+        println!();
+        println!("⚡ Generating...");
+    }
+
+    // Run inference
+    let params = InferenceParams {
+        max_tokens,
+        temperature,
+        ..Default::default()
+    };
+
+    let result = rt.complete(&prompt_text, &params)?;
+    rt.unload()?;
+
+    if json_output {
+        // Pure JSON output — machine-readable
+        let output = serde_json::json!({
+            "runtime": rt.name(),
+            "model": info,
+            "prompt": {
+                "text": prompt_text,
+                "chars": prompt_text.len()
+            },
+            "inference": {
+                "text": result.text,
+                "performance": {
+                    "ttft_ms": result.ttft_ms,
+                    "tokens_per_second": result.tokens_per_second,
+                    "total_tokens": result.total_tokens,
+                    "prompt_tokens": result.prompt_tokens,
+                    "total_duration_ms": result.total_duration_ms
+                }
+            }
+        });
+        println!("{}", serde_json::to_string_pretty(&output)?);
+    } else {
+        println!();
+        println!("📝 Response:");
+        println!("{}", "─".repeat(60));
+        println!("{}", result.text);
+        println!("{}", "─".repeat(60));
+        println!();
+
+        println!("📊 Performance:");
+        println!("  ⏱  TTFT (Time to First Token):  {:.1} ms", result.ttft_ms);
+        println!("  🚀 Tokens/sec:                  {:.1}", result.tokens_per_second);
+        println!("  📊 Total tokens generated:      {}", result.total_tokens);
+        println!("  📊 Prompt tokens processed:     {}", result.prompt_tokens);
+        println!("  ⏱  Total duration:              {:.1} ms", result.total_duration_ms);
+        println!();
+        println!("{} Spike complete!", "✓".bright_green());
+    }
+
+    Ok(0)
+}
+
 fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
 
     print_banner();
 
     match &cli.command {
+        Some(Commands::Run {
+            model,
+            prompt,
+            max_tokens,
+            temperature,
+            json,
+            server_path,
+            verbose,
+        }) => {
+            let exit_code = run_inference(
+                model.as_deref(),
+                prompt.as_deref(),
+                *max_tokens,
+                *temperature,
+                *json,
+                server_path.as_deref(),
+                *verbose,
+            )?;
+            std::process::exit(exit_code);
+        }
+
         Some(Commands::Validate { project_root, schemas, verbose }) => {
             let root = project_root.canonicalize()?;
             let exit_code = run_validate(&root, schemas, *verbose)?;

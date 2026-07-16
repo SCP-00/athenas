@@ -1,0 +1,28 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Model Registration",
+  "type": "object",
+  "required": ["id", "title", "date", "status", "version", "authority", "architecture", "parameters", "license"],
+  "properties": {
+    "id": { "type": "string", "pattern": "^MODEL-\\d{4}$" },
+    "title": { "type": "string" },
+    "author": { "type": "string" },
+    "date": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+    "status": { "type": "string", "enum": ["Registered", "Testing", "Certified", "Archived", "Rejected"] },
+    "version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "authority": { "type": "string" },
+    "architecture": { "type": "string" },
+    "parameters": { "type": "number" },
+    "license": { "type": "string" },
+    "completion": { "type": "integer" },
+    "missing_sections": { "type": "array", "items": { "type": "string" } },
+    "review_status": { "type": "string" },
+    "confidence": { "type": "number" },
+    "implements": { "type": "array", "items": { "type": "string" } },
+    "depends_on": { "type": "array", "items": { "type": "string" } },
+    "validated_by": { "type": "array", "items": { "type": "string" } },
+    "derived_from": { "type": "array", "items": { "type": "string" } },
+    "supersedes": { "type": "array", "items": { "type": "string" } },
+    "related": { "type": "array", "items": { "type": "string" } }
+  }
+}

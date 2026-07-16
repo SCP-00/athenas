@@ -30,11 +30,11 @@ pub fn find_markdown_files(root: &Path) -> Vec<String> {
         let path = e.path();
         // Skip hidden directories, node_modules, .git, templates
         if path.is_dir() {
-            let name = path.file_name().unwrap_or_default().to_string_lossy();
-            return !name.starts_with('.')
-                && name != "node_modules"
-                && name != "templates"
-                && name != "target";
+            let name = path.file_name().unwrap_or_default().to_string_lossy();                return !name.starts_with('.')
+                    && name != "node_modules"
+                    && name != "templates"
+                    && name != "target"
+                    && name != "tests";
         }
         true
     }) {
