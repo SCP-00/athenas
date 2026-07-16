@@ -2,6 +2,7 @@
 id: CONTEXT-2026-07-16
 title: Current Context — 2026-07-16
 date: 2026-07-16
+status: Active
 purpose: "Daily project snapshot for rapid agent onboarding"
 ---
 

@@ -1,0 +1,103 @@
+---
+// Athenas Dashboard — Knowledge Graph Page
+import { readFileSync } from 'fs';
+
+let graph = null;
+try {
+  graph = JSON.parse(readFileSync('../.knowledge/graph.json', 'utf-8'));
+} catch (e) {}
+---
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Knowledge Graph — Athenas</title>
+  <style>
+    :root {
+      --bg: #0d1117; --surface: #161b22; --border: #30363d;
+      --text: #c9d1d9; --text-muted: #8b949e; --accent: #58a6ff;
+      --green: #3fb950; --yellow: #d29922; --red: #f85149;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); }
+    .container { max-width: 1200px; margin: 0 auto; padding: 2rem; }
+    header { border-bottom: 1px solid var(--border); padding: 1.5rem 2rem; }
+    header h1 { font-size: 1.5rem; color: #fff; }
+    header h1 span { color: var(--accent); }
+    nav { display: flex; gap: 0; border-bottom: 1px solid var(--border); background: var(--surface); }
+    nav a { padding: 0.75rem 1.5rem; color: var(--text-muted); text-decoration: none; font-size: 0.875rem; border-bottom: 2px solid transparent; }
+    nav a:hover, nav a.active { color: #fff; border-bottom-color: var(--accent); }
+    h2 { font-size: 1.25rem; margin: 2rem 0 1rem; color: #fff; }
+    table { width: 100%; border-collapse: collapse; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+    th, td { padding: 0.5rem 0.75rem; text-align: left; font-size: 0.8rem; border-bottom: 1px solid var(--border); }
+    th { background: #1c2128; color: var(--text-muted); font-weight: 600; }
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+    .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1.25rem; }
+    .stat-card .value { font-size: 1.5rem; font-weight: 700; color: #fff; }
+    .stat-card .label { font-size: 0.8rem; color: var(--text-muted); }
+    .node-list { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 2rem; }
+    .node-tag { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 0.4rem 0.8rem; font-size: 0.8rem; }
+    .node-tag .type { color: var(--accent); font-weight: 600; }
+    .node-tag .id { color: var(--text); }
+    .rel { color: var(--yellow); font-size: 0.7rem; margin: 0 0.25rem; }
+    .footer { text-align: center; color: var(--text-muted); font-size: 0.8rem; padding: 2rem; border-top: 1px solid var(--border); margin-top: 3rem; }
+  </style>
+</head>
+<body>
+  <header><h1><span>ATHENAS</span> Knowledge Graph</h1></header>
+  <nav>
+    <a href="/athenas/">Overview</a>
+    <a href="/athenas/documents">Documents</a>
+    <a href="/athenas/graph" class="active">Knowledge Graph</a>
+    <a href="/athenas/timeline">Timeline</a>
+    <a href="https://github.com/SCP-00/athenas" target="_blank">GitHub →</a>
+  </nav>
+
+  <main class="container">
+    {graph ? (
+      <>
+        <div class="stats-grid">
+          <div class="stat-card"><div class="value">{graph.metadata.total_nodes}</div><div class="label">Nodes</div></div>
+          <div class="stat-card"><div class="value">{graph.metadata.total_edges}</div><div class="label">Edges</div></div>
+          <div class="stat-card"><div class="value">{Object.keys(graph.metadata.doc_types).length}</div><div class="label">Types</div></div>
+        </div>
+
+        <h2>Nodes ({graph.nodes.length})</h2>
+        <div class="node-list">
+          {graph.nodes.map(node => (
+            <span class="node-tag">
+              <span class="type">{node.doc_type}</span>
+              <span class="id">{node.id}</span>
+              <span style="color: var(--text-muted); font-size:0.7rem; margin-left:0.25rem;">{node.status}</span>
+            </span>
+          ))}
+        </div>
+
+        {graph.edges.length > 0 && (
+          <>
+            <h2>Relationships ({graph.edges.length})</h2>
+            <table>
+              <thead><tr><th>Source</th><th>→</th><th>Target</th><th>Relationship</th></tr></thead>
+              <tbody>
+                {graph.edges.map(edge => (
+                  <tr>
+                    <td>{edge.source}</td>
+                    <td><span class="rel">→</span></td>
+                    <td>{edge.target}</td>
+                    <td><span class="rel">{edge.relationship}</span></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </>
+        )}
+      </>
+    ) : (
+      <p style="text-align:center; margin-top:3rem; color: var(--text-muted);">No graph data.</p>
+    )}
+  </main>
+  <footer class="footer">Athenas · Genesis v0.1.0</footer>
+</body>
+</html>

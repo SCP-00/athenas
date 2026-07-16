@@ -1,0 +1,45 @@
+# Athenas Roadmap State
+# Tracks milestone progress
+
+active_milestone: M0
+milestones:
+  M0:
+    name: Genesis
+    description: Constitution, Bootstrap, Knowledge System
+    progress: 0.15
+    target_date: null
+  M1:
+    name: Runtime Core
+    description: Registry, Profiles, Providers
+    progress: 0.0
+    target_date: null
+  M2:
+    name: Benchmark Engine
+    description: Automated benchmarking pipeline
+    progress: 0.0
+    target_date: null
+  M3:
+    name: Certification
+    description: Model certification pipeline
+    progress: 0.0
+    target_date: null
+  M4:
+    name: Dashboard
+    description: Web dashboard for monitoring
+    progress: 0.0
+    target_date: null
+  M5:
+    name: Agent Platform
+    description: Agent orchestration engine
+    progress: 0.0
+    target_date: null
+  M6:
+    name: Plugin Ecosystem
+    description: Third-party plugin system
+    progress: 0.0
+    target_date: null
+  M7:
+    name: Public Release
+    description: Stable public launch
+    progress: 0.0
+    target_date: null

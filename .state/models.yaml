@@ -1,0 +1,7 @@
+# Athenas Models State
+# Tracks registered models, certifications, and active profiles
+
+registered_models: 0
+certified_models: 0
+active_profiles: 0
+last_benchmark: null

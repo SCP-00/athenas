@@ -1,0 +1,5 @@
+# Athenas Runtime State
+# Tracks available inference runtimes and their configurations
+
+active_runtime: none
+runtimes: {}
