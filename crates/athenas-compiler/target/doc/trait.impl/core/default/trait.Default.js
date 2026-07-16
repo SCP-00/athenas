@@ -1,0 +1,9 @@
+(function() {
+    const implementors = Object.fromEntries([["jsonschema",[["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/1.95.0/core/default/trait.Default.html\" title=\"trait core::default::Default\">Default</a> for <a class=\"enum\" href=\"jsonschema/output/enum.BasicOutput.html\" title=\"enum jsonschema::output::BasicOutput\">BasicOutput</a>&lt;'_&gt;",0],["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/1.95.0/core/default/trait.Default.html\" title=\"trait core::default::Default\">Default</a> for <a class=\"struct\" href=\"jsonschema/paths/struct.LazyLocation.html\" title=\"struct jsonschema::paths::LazyLocation\">LazyLocation</a>&lt;'_, '_&gt;",0],["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/1.95.0/core/default/trait.Default.html\" title=\"trait core::default::Default\">Default</a> for <a class=\"struct\" href=\"jsonschema/paths/struct.Location.html\" title=\"struct jsonschema::paths::Location\">Location</a>",0],["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/1.95.0/core/default/trait.Default.html\" title=\"trait core::default::Default\">Default</a> for <a class=\"struct\" href=\"jsonschema/struct.ValidationOptions.html\" title=\"struct jsonschema::ValidationOptions\">ValidationOptions</a>&lt;<a class=\"struct\" href=\"https://doc.rust-lang.org/1.95.0/alloc/sync/struct.Arc.html\" title=\"struct alloc::sync::Arc\">Arc</a>&lt;dyn <a class=\"trait\" href=\"jsonschema/trait.Retrieve.html\" title=\"trait jsonschema::Retrieve\">Retrieve</a>&gt;&gt;",0]]]]);
+    if (window.register_implementors) {
+        window.register_implementors(implementors);
+    } else {
+        window.pending_implementors = implementors;
+    }
+})()
+//{"start":59,"fragment_lengths":[1465]}

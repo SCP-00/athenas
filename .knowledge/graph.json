@@ -1,0 +1,84 @@
+{
+  "nodes": [
+    {
+      "id": "CONST-0001",
+      "title": "The Athenas Constitution",
+      "doc_type": "CONST",
+      "status": "Draft",
+      "authority_level": 0,
+      "path": "00-Constitution/CONST-0001.md",
+      "hash": "290acfa00af6c0ddd75fb097ebdc8a44ecc508c7702a44344ff64f974e579997",
+      "tags": []
+    },
+    {
+      "id": "DIRECTIVE-0001",
+      "title": "How Athenas Must Be Developed",
+      "doc_type": "DIRECTIVE",
+      "status": "Approved",
+      "authority_level": 3,
+      "path": "03-Engineering/DIRECTIVE-0001.md",
+      "hash": "5fe56d4e7fb686b82ef4a3a7c01a88928caa063e514c361caa23e86725f8a5ff",
+      "tags": []
+    },
+    {
+      "id": "ADR-NNNN",
+      "title": "Untitled",
+      "doc_type": "ADR",
+      "status": "Draft",
+      "authority_level": 4,
+      "path": "12-ADR/ADR-template.md",
+      "hash": "61e489836bb2a8f86195a15b07f6d93dc3a0e37b41990501c68dc7293d6b33b3",
+      "tags": []
+    },
+    {
+      "id": "BOOTSTRAP-0001",
+      "title": "Athenas Agent Bootstrap",
+      "doc_type": "BOOTSTRAP",
+      "status": "Active",
+      "authority_level": 8,
+      "path": "BOOTSTRAP.md",
+      "hash": "1512c13e6649fc7d1c2e2a428544586f6746d210185d51f4c49f52cb326096f6",
+      "tags": []
+    },
+    {
+      "id": "CONTEXT-2026-07-16",
+      "title": "Current Context — 2026-07-16",
+      "doc_type": "CONTEXT",
+      "status": "Unknown",
+      "authority_level": 8,
+      "path": "CURRENT_CONTEXT.md",
+      "hash": "512acf252c3db9691bd32d1e2a415b53430687c4293fc662240ac9affed12c6b",
+      "tags": []
+    },
+    {
+      "id": "INDEX-0001",
+      "title": "Athenas Project Index",
+      "doc_type": "INDEX",
+      "status": "Active",
+      "authority_level": 8,
+      "path": "knowledge.md",
+      "hash": "5bbaba3a3c548266d52db1e857e32964d544eaf961cb5b61849879ae026b78f5",
+      "tags": []
+    }
+  ],
+  "edges": [],
+  "metadata": {
+    "total_nodes": 6,
+    "total_edges": 0,
+    "doc_types": {
+      "BOOTSTRAP": 1,
+      "CONTEXT": 1,
+      "INDEX": 1,
+      "DIRECTIVE": 1,
+      "ADR": 1,
+      "CONST": 1
+    },
+    "status_counts": {
+      "Unknown": 1,
+      "Approved": 1,
+      "Draft": 2,
+      "Active": 2
+    },
+    "generated_at": "2026-07-16T14:18:42Z"
+  }
+}

@@ -1,0 +1,11 @@
+/home/buendia001/Projects/crates/athenas-compiler/target/debug/deps/uuid_simd-86f77f88cc6417c1.d: /home/buendia001/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/uuid-simd-0.8.0/src/lib.rs /home/buendia001/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/uuid-simd-0.8.0/src/error.rs /home/buendia001/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/uuid-simd-0.8.0/src/spec.rs /home/buendia001/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/uuid-simd-0.8.0/src/format.rs /home/buendia001/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/uuid-simd-0.8.0/src/parse.rs /home/buendia001/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/uuid-simd-0.8.0/src/multiversion.rs /home/buendia001/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/uuid-simd-0.8.0/src/ext.rs
+
+/home/buendia001/Projects/crates/athenas-compiler/target/debug/deps/libuuid_simd-86f77f88cc6417c1.rmeta: /home/buendia001/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/uuid-simd-0.8.0/src/lib.rs /home/buendia001/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/uuid-simd-0.8.0/src/error.rs /home/buendia001/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/uuid-simd-0.8.0/src/spec.rs /home/buendia001/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/uuid-simd-0.8.0/src/format.rs /home/buendia001/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/uuid-simd-0.8.0/src/parse.rs /home/buendia001/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/uuid-simd-0.8.0/src/multiversion.rs /home/buendia001/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/uuid-simd-0.8.0/src/ext.rs
+
+/home/buendia001/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/uuid-simd-0.8.0/src/lib.rs:
+/home/buendia001/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/uuid-simd-0.8.0/src/error.rs:
+/home/buendia001/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/uuid-simd-0.8.0/src/spec.rs:
+/home/buendia001/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/uuid-simd-0.8.0/src/format.rs:
+/home/buendia001/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/uuid-simd-0.8.0/src/parse.rs:
+/home/buendia001/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/uuid-simd-0.8.0/src/multiversion.rs:
+/home/buendia001/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/uuid-simd-0.8.0/src/ext.rs:

@@ -1,0 +1,287 @@
+{
+  "Capability": {
+    "description": "A measurable functionality that a Model can perform. Capabilities are the unit of certification in Athenas.\n",
+    "examples": [
+      "OCR (image to text)",
+      "Coding (code generation)",
+      "Reasoning (multi-step logic)",
+      "Retrieval (long-context recall)"
+    ],
+    "id": "ONT-0005",
+    "properties": [
+      "name",
+      "description",
+      "measurement_method",
+      "benchmark_reference"
+    ],
+    "related": [
+      {
+        "Model": "A Model implements Capabilities"
+      },
+      {
+        "BENCH": "A Benchmark measures a Capability"
+      }
+    ]
+  },
+  "CapabilityLeader": {
+    "description": "The Model with the highest Certified score for a specific Capability on a specific hardware configuration. NEVER call this \"best model\".\n",
+    "id": "ONT-0012",
+    "related": [
+      {
+        "Model": "A specific Model holds the leader position"
+      },
+      {
+        "Capability": "For a specific Capability"
+      },
+      {
+        "Certification": "Based on Certification results"
+      }
+    ]
+  },
+  "Certification": {
+    "description": "The process of evaluating a Model/Quant/Profile against a set of Capabilities and producing a Certification Decision (KEEP, ARCHIVE, REJECT). Certification is the core value of Athenas.\n",
+    "id": "ONT-0008",
+    "properties": [
+      "subject (model/quant/profile)",
+      "pipeline_steps",
+      "results",
+      "decision (KEEP | ARCHIVE | REJECT)",
+      "timestamp"
+    ],
+    "related": [
+      {
+        "EvidencePackage": "Produces an Evidence Package"
+      },
+      {
+        "Model": "Certifies Models"
+      },
+      {
+        "Capability": "Tests Capabilities"
+      }
+    ]
+  },
+  "CertifiedDefault": {
+    "description": "The officially recommended Model/Quant/Profile combination for a given hardware configuration and use case. NEVER call this \"recommended model\".\n",
+    "id": "ONT-0011",
+    "related": [
+      {
+        "Model": "A Certified Default includes a Model"
+      },
+      {
+        "Profile": "A Certified Default includes a Profile"
+      },
+      {
+        "Certification": "Requires formal Certification"
+      }
+    ]
+  },
+  "Document": {
+    "description": "Any authored artifact in the Athenas system. Every Document has an ID, authority level, status, and explicit relationships to other Documents.\n",
+    "id": "ONT-0015",
+    "properties": [
+      "id (PREFIX-NNNN)",
+      "authority_level (0-8)",
+      "status (Draft, Review, Approved, Superseded, Archived)",
+      "relationships (implements, depends_on, validates, etc.)"
+    ],
+    "related": [
+      {
+        "All types": "Documents include all CONST, DIRECTIVE, REQ, SPEC, etc."
+      }
+    ]
+  },
+  "EngineeringLog": {
+    "description": "A daily record of engineering activity. Not a journal — a structured artifact containing: what was done, what was learned, what failed, and what comes next.\n",
+    "id": "ONT-0014"
+  },
+  "Evidence": {
+    "description": "A validated experimental result. Evidence is the atomic unit of proof in Athenas. Every claim must be supported by Evidence.\n",
+    "examples": [
+      "BENCH-0007 (TTFT measurement for Qwen3.5 on RTX3050)"
+    ],
+    "id": "ONT-0006",
+    "properties": [
+      "claim_id",
+      "confidence (0.0-1.0)",
+      "hardware_used",
+      "runtime_used",
+      "conditions",
+      "raw_data",
+      "reproducibility_hash"
+    ],
+    "related": [
+      {
+        "BENCH": "Evidence is produced by Benchmarks"
+      },
+      {
+        "Experiment": "Evidence is derived from Experiments"
+      }
+    ]
+  },
+  "EvidencePackage": {
+    "description": "A collection of Evidence items that together support a certification decision. Not a single benchmark — an Evidence Package is a decision-ready artifact.\n",
+    "examples": [
+      "Model Certification Report",
+      "Profile Validation Package"
+    ],
+    "id": "ONT-0007",
+    "properties": [
+      "model",
+      "capabilities_tested",
+      "evidence_items",
+      "aggregate_score",
+      "certification_decision"
+    ],
+    "related": [
+      {
+        "Evidence": "Contains multiple Evidence items"
+      },
+      {
+        "Model": "Certifies a Model"
+      },
+      {
+        "Profile": "Validates a Profile"
+      }
+    ]
+  },
+  "ExecutionUnit": {
+    "description": "An executable procedure. Replaces the ambiguous term \"script\". An ExecutionUnit has defined inputs, outputs, contracts, and error modes.\n",
+    "examples": [
+      "benchmark-runner",
+      "model-downloader",
+      "certification-pipeline"
+    ],
+    "id": "ONT-0010",
+    "properties": [
+      "interface (inputs, outputs, contracts, errors)",
+      "language",
+      "runtime_dependencies"
+    ],
+    "related": [
+      {
+        "Tool": "ExecutionUnits can be composed into Tools"
+      }
+    ]
+  },
+  "KnowledgeGraph": {
+    "description": "The conceptual model that connects every entity in Athenas. The Knowledge Graph is not a database — it is the logical topology of all engineering knowledge in the project.\n",
+    "id": "ONT-0013",
+    "properties": [
+      {
+        "nodes (all entities": "models, profiles, documents, experiments)"
+      },
+      {
+        "edges (all relationships": "implements, validates, depends_on)"
+      }
+    ],
+    "related": [
+      "ALL entities in this ontology"
+    ]
+  },
+  "Model": {
+    "description": "A set of neural network weights, typically produced by training. A Model is immutable — it does not change after training.\n",
+    "examples": [
+      "Qwen3.5-9B",
+      "Llama-3.2-8B"
+    ],
+    "id": "ONT-0001",
+    "properties": [
+      "architecture (transformer, Mamba, MoE)",
+      "parameter_count",
+      "training_data",
+      "license"
+    ],
+    "related": [
+      {
+        "Quant": "A Model can be quantized into multiple Quants"
+      },
+      {
+        "Runtime": "A Model is executed by a Runtime"
+      },
+      {
+        "Profile": "A Profile defines how a Model is executed"
+      }
+    ]
+  },
+  "Profile": {
+    "description": "An execution policy. A Profile specifies how a Model/Quant is executed on a Runtime. It is NOT the model itself — it is the policy that governs execution.\n",
+    "examples": [
+      "Research Profile (262K ctx, temp 0.3, parallel 1)",
+      "Coding Profile (64K ctx, temp 0.15, grammar-constrained)"
+    ],
+    "id": "ONT-0004",
+    "properties": [
+      "max_context",
+      "temperature",
+      "samplers",
+      "batch_size",
+      "speculative_decoding (true/false)",
+      "grammar"
+    ],
+    "related": [
+      {
+        "Runtime": "A Profile is executed by a Runtime"
+      },
+      {
+        "Model": "A Profile targets a Model"
+      },
+      {
+        "Quant": "A Profile uses a specific Quant"
+      }
+    ]
+  },
+  "Quant": {
+    "description": "A specific compression implementation applied to a Model. A Quant is the combination of a Model + quantization algorithm + parameters.\n",
+    "examples": [
+      "Qwen3.5-9B-IQ3_XXS",
+      "Llama-3.2-8B-Q4_K_M"
+    ],
+    "id": "ONT-0002",
+    "properties": [
+      "base_model",
+      "algorithm (IQ3_XXS, Q4_K_M, Q8_0)",
+      "file_size",
+      "bit_width"
+    ],
+    "related": [
+      {
+        "Model": "A Quant is derived from a Model"
+      },
+      {
+        "Profile": "A Profile selects a specific Quant"
+      }
+    ]
+  },
+  "Runtime": {
+    "description": "A software system capable of executing a Model (or Quant) on hardware. Runtimes are interchangeable — Athenas depends on the Runtime Interface, not any specific Runtime.\n",
+    "examples": [
+      "llama.cpp",
+      "vLLM",
+      "MLX",
+      "Ollama",
+      "LM Studio"
+    ],
+    "id": "ONT-0003",
+    "properties": [
+      "name",
+      "version",
+      "supported_hardware",
+      "supported_quantizations",
+      "provider_interface"
+    ],
+    "related": [
+      {
+        "Profile": "A Profile targets a specific Runtime"
+      },
+      {
+        "Model": "A Runtime executes Models"
+      }
+    ]
+  },
+  "RuntimeProfile": {
+    "description": "ALIAS: \"Profile\". Deprecated term. Use \"Profile\" instead.\n",
+    "id": "ONT-0009",
+    "status": "deprecated",
+    "superseded_by": "Profile (ONT-0004)"
+  }
+}

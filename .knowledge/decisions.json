@@ -1,0 +1,30 @@
+[
+  {
+    "date": "2026-07-16",
+    "id": "CONST-0001",
+    "title": "The Athenas Constitution",
+    "decision": "Initial draft of CONST-0001 completed",
+    "rationale": "Establish foundational principles before any implementation"
+  },
+  {
+    "date": "2026-07-16",
+    "id": "CONST-0001",
+    "title": "The Athenas Constitution",
+    "decision": "Adopt 8-article structure",
+    "rationale": "Covers principles, authority, documents, process, governance, graph, validation, final"
+  },
+  {
+    "date": "2026-07-16",
+    "id": "DIRECTIVE-0001",
+    "title": "How Athenas Must Be Developed",
+    "decision": "Adopt DIRECTIVE-0001",
+    "rationale": "Establish engineering foundations from day one"
+  },
+  {
+    "date": "YYYY-MM-DD",
+    "id": "ADR-NNNN",
+    "title": "",
+    "decision": "[Decision]",
+    "rationale": "[Why]"
+  }
+]

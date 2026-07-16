@@ -1,0 +1,10 @@
+# Athenas Knowledge State
+# Tracks document counts, knowledge graph status
+
+last_compilation: null
+total_documents: 6
+total_graph_nodes: 6
+total_graph_edges: 0
+last_validation: null
+validation_errors: 0
+validation_warnings: 0

@@ -45,5 +45,11 @@ build/
 *.log
 logs/
 
+# Rust build artifacts
+crates/*/target/
+
+# Compiler output
+.knowledge/
+
 # Project specific
 .git-commit-marker

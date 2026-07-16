@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["Draft","ReferencingError"],"fn":["is_valid","options","validate","validator_for"],"mod":["draft201909","draft202012","draft4","draft6","draft7","error","meta","output","paths","primitive_type"],"struct":["Registry","RegistryOptions","Resource","Uri","ValidationOptions","Validator"],"trait":["Keyword","Retrieve"]};

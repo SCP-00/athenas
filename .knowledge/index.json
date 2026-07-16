@@ -1,0 +1,50 @@
+[
+  {
+    "id": "CONST-0001",
+    "title": "The Athenas Constitution",
+    "doc_type": "CONST",
+    "status": "Draft",
+    "path": "00-Constitution/CONST-0001.md",
+    "snippet": "# CONST-0001 — The Athenas Constitution\n\n> **Authority:** Level 0 (Constitution) — No document may contradict this.\n> **Status:** Draft\n> **Completion:** 80%\n\n---\n\n## Preamble\n\nAthenas is an engineeri"
+  },
+  {
+    "id": "DIRECTIVE-0001",
+    "title": "How Athenas Must Be Developed",
+    "doc_type": "DIRECTIVE",
+    "status": "Approved",
+    "path": "03-Engineering/DIRECTIVE-0001.md",
+    "snippet": "# DIRECTIVE-0001 — How Athenas Must Be Developed\n\n> **Authority:** Level 3 (Engineering)\n> **Status:** Approved\n> **Scope:** All agents and developers contributing to Athenas\n\n---\n\n## 1. GitHub Is the"
+  },
+  {
+    "id": "ADR-NNNN",
+    "title": "Untitled",
+    "doc_type": "ADR",
+    "status": "Draft",
+    "path": "12-ADR/ADR-template.md",
+    "snippet": "# ADR-NNNN — [Decision Title]\n\n> **Authority:** Level 4 (Architecture Decision Record)\n\n---\n\n## Context\n\n[What is the problem or opportunity? What makes this decision necessary?]\n\n## Decision\n\n[What a"
+  },
+  {
+    "id": "BOOTSTRAP-0001",
+    "title": "Athenas Agent Bootstrap",
+    "doc_type": "BOOTSTRAP",
+    "status": "Active",
+    "path": "BOOTSTRAP.md",
+    "snippet": "# BOOTSTRAP.md — Agent Bootstrap\n\n> Welcome to **Athenas**, an engineering platform for local artificial intelligence.\n> This document explains how to start contributing in under 5 minutes.\n\n---\n\n## 1"
+  },
+  {
+    "id": "CONTEXT-2026-07-16",
+    "title": "Current Context — 2026-07-16",
+    "doc_type": "CONTEXT",
+    "status": "Unknown",
+    "path": "CURRENT_CONTEXT.md",
+    "snippet": "# Current Context — 2026-07-16\n\n> This file changes daily. It is the first thing after BOOTSTRAP.md that an agent should read.\n\n---\n\n## Project Phase\n\n**Genesis** — Establishing engineering foundation"
+  },
+  {
+    "id": "INDEX-0001",
+    "title": "Athenas Project Index",
+    "doc_type": "INDEX",
+    "status": "Active",
+    "path": "knowledge.md",
+    "snippet": "# Project Index\n\n> This file is a **living index**. It does not contain explanations — it points to them.\n> Documents are identified by their ID, never by name alone.\n\n---\n\n## What Is Athenas?\n\nAn eng"
+  }
+]

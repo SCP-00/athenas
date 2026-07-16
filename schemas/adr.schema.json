@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "athenas:adr",
+  "title": "Architecture Decision Record",
+  "description": "Athenas ADR document — records architectural decisions",
+  "type": "object",
+  "required": ["id", "title", "date", "status", "version"],
+  "properties": {
+    "id": { "type": "string", "pattern": "^ADR-\\d{4}$" },
+    "title": { "type": "string" },
+    "author": { "type": "string" },
+    "date": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+    "status": {
+      "type": "string",
+      "enum": ["Draft", "Review", "Approved", "Superseded", "Archived"]
+    },
+    "version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "supersedes": { "type": "array", "items": { "type": "string" } },
+    "related": { "type": "array", "items": { "type": "string" } }
+  }
+}

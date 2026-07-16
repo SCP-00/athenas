@@ -1,0 +1,38 @@
+[
+  {
+    "date": "2026-07-16",
+    "id": "CONST-0001",
+    "title": "The Athenas Constitution",
+    "event": "CONST-0001 created/updated"
+  },
+  {
+    "date": "2026-07-16",
+    "id": "DIRECTIVE-0001",
+    "title": "How Athenas Must Be Developed",
+    "event": "DIRECTIVE-0001 created/updated"
+  },
+  {
+    "date": "2026-07-16",
+    "id": "BOOTSTRAP-0001",
+    "title": "Athenas Agent Bootstrap",
+    "event": "BOOTSTRAP-0001 created/updated"
+  },
+  {
+    "date": "2026-07-16",
+    "id": "CONTEXT-2026-07-16",
+    "title": "Current Context — 2026-07-16",
+    "event": "CONTEXT-2026-07-16 created/updated"
+  },
+  {
+    "date": "2026-07-16",
+    "id": "INDEX-0001",
+    "title": "Athenas Project Index",
+    "event": "INDEX-0001 created/updated"
+  },
+  {
+    "date": "YYYY-MM-DD",
+    "id": "ADR-NNNN",
+    "title": "Untitled",
+    "event": "ADR-NNNN created/updated"
+  }
+]

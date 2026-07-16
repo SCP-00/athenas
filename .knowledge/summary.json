@@ -1,0 +1,21 @@
+{
+  "document_types": {
+    "ADR": 1,
+    "BOOTSTRAP": 1,
+    "CONST": 1,
+    "CONTEXT": 1,
+    "DIRECTIVE": 1,
+    "INDEX": 1
+  },
+  "errors": 0,
+  "generated_at": "2026-07-16T14:18:42Z",
+  "status_counts": {
+    "Active": 2,
+    "Approved": 1,
+    "Draft": 2,
+    "Unknown": 1
+  },
+  "total_documents": 6,
+  "total_relationships": 0,
+  "warnings": 2
+}
