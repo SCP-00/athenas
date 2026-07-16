@@ -16,6 +16,7 @@ pub struct Document {
     /// Markdown body (everything after the front-matter)
     pub body: String,
     /// Full raw content including front-matter
+    #[allow(dead_code)]
     pub raw: String,
     /// SHA256 hash of the raw content
     pub hash: String,

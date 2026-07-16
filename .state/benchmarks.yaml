@@ -1,0 +1,13 @@
+# Athenas Benchmarks State
+# Tracks completed and pending benchmarks
+
+total_benchmarks: 0
+last_benchmark: null
+active_benchmarks: []
+pending_benchmarks:
+  - id: BENCH-0001
+    description: First baseline measurement
+    status: pending
+    model: null
+    runtime: null
+    profile: null

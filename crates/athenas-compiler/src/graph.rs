@@ -125,7 +125,7 @@ pub fn build_knowledge_graph(documents: &[Document]) -> KnowledgeGraph {
     let mut doc_types: HashMap<String, usize> = HashMap::new();
     let mut status_counts: HashMap<String, usize> = HashMap::new();
 
-    let mut known_ids: HashSet<String> = documents.iter().map(|d| d.id.clone()).collect();
+    let known_ids: HashSet<String> = documents.iter().map(|d| d.id.clone()).collect();
 
     for doc in documents {
         let doc_type = doc_type_from_id(&doc.id);
