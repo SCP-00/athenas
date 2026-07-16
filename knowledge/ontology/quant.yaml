@@ -1,0 +1,52 @@
+# Quant Ontology
+# Defines the Quant entity — a compression implementation of a Model.
+
+entity: Quant
+description: >
+  A specific compression implementation applied to a Model.
+  A Quant is the combination of: Model + Quantization Algorithm + Parameters.
+  Multiple Quants can exist for the same Model (e.g., IQ3_XXS, Q4_K_M).
+
+properties:
+  - name: id
+    type: string
+    pattern: "^QUANT-\\d{4}$"
+    required: true
+  
+  - name: base_model
+    type: string
+    pattern: "^MODEL-\\d{4}$"
+    description: "Reference to the base model"
+    required: true
+  
+  - name: algorithm
+    type: string
+    description: "Quantization algorithm (e.g., IQ3_XXS, Q4_K_M, Q8_0)"
+    required: true
+  
+  - name: file_size
+    type: string
+    description: "File size of the quantized model"
+  
+  - name: bit_width
+    type: number
+    description: "Effective bit width per parameter"
+
+relationships:
+  - type: derived_from
+    target: Model
+    description: "A Quant is derived from a Model"
+  
+  - type: executable_by
+    target: Runtime
+    description: "A Quant can be executed by compatible runtimes"
+  
+  - type: benchmarked_in
+    target: Benchmark
+    description: "A Quant is evaluated in benchmarks"
+
+lifecycle:
+  - Available
+  - Tested
+  - Recommended
+  - Archived

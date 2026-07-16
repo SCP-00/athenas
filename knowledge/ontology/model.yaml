@@ -1,0 +1,60 @@
+# Model Ontology
+# Defines the Model entity — neural network weights produced by training.
+
+entity: Model
+description: >
+  A set of neural network weights, typically produced by training.
+  A Model is immutable — it does not change after training.
+
+properties:
+  - name: id
+    type: string
+    pattern: "^MODEL-\\d{4}$"
+    required: true
+  
+  - name: name
+    type: string
+    description: "Human-readable model name (e.g., Qwen3.5-9B)"
+    required: true
+  
+  - name: architecture
+    type: string
+    enum: [Transformer, Mamba, MoE, RNN, SSM]
+    required: true
+  
+  - name: parameters
+    type: string
+    description: "Parameter count (e.g., 9B, 70B, 405B)"
+    required: true
+  
+  - name: context_length
+    type: integer
+    description: "Maximum native context length in tokens"
+  
+  - name: license
+    type: string
+    description: "Model license (e.g., Apache 2.0, LLaMA 3 Community)"
+  
+  - name: source
+    type: string
+    format: uri
+    description: "URL to model source or hub page"
+
+relationships:
+  - type: has_quant
+    target: Quant
+    description: "A Model can be compressed into multiple Quants"
+  
+  - type: supports
+    target: Capability
+    description: "A Model possesses measurable capabilities"
+
+  - type: certified_by
+    target: Evidence
+    description: "A Model has been validated by evidence packages"
+
+lifecycle:
+  - Registered
+  - Benchmarking
+  - Certified
+  - Archived

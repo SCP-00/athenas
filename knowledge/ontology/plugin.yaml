@@ -1,0 +1,54 @@
+# Plugin Ontology
+# Defines the Plugin entity — an extension to the Athenas platform.
+
+entity: Plugin
+description: >
+  An extension to the Athenas platform. Plugins add capabilities
+  without modifying the core. Every plugin implements a known interface
+  and can be loaded dynamically.
+
+properties:
+  - name: id
+    type: string
+    pattern: "^PLUGIN-\\d{4}$"
+    required: true
+  
+  - name: name
+    type: string
+    description: "Plugin display name"
+    required: true
+  
+  - name: version
+    type: string
+    pattern: "^\\d+\\.\\d+\\.\\d+$"
+  
+  - name: api_version
+    type: string
+    description: "Athenas API version this plugin targets"
+    required: true
+  
+  - name: provides
+    type: array
+    items:
+      type: string
+    description: "Capabilities or tools this plugin provides"
+  
+  - name: requires
+    type: array
+    items:
+      type: string
+    description: "Dependencies this plugin requires"
+
+relationships:
+  - type: implements
+    target: PluginInterface
+    description: "A plugin implements the Athenas Plugin API"
+  
+  - type: extends
+    target: Capability
+    description: "A plugin extends platform capabilities"
+
+lifecycle:
+  - Registered
+  - Compatible
+  - Deprecated

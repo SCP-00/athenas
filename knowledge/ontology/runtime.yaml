@@ -1,0 +1,59 @@
+# Runtime Ontology
+# Defines the Runtime entity — software capable of executing a Model.
+
+entity: Runtime
+description: >
+  A software system capable of executing a Model (or Quant) on hardware.
+  Runtimes are interchangeable — Athenas depends on the Runtime Interface,
+  not any specific Runtime implementation.
+
+properties:
+  - name: id
+    type: string
+    pattern: "^RUNTIME-\\d{4}$"
+    required: true
+  
+  - name: name
+    type: string
+    description: "Runtime name (e.g., llama.cpp, vLLM, MLX)"
+    required: true
+  
+  - name: version
+    type: string
+    pattern: "^\\d+\\.\\d+\\.\\d+$"
+    description: "Runtime version in semver format"
+  
+  - name: provider
+    type: string
+    description: "Provider interface implementation (e.g., LlamaCppProvider)"
+  
+  - name: supports_hardware
+    type: array
+    items:
+      type: string
+    description: "Supported hardware targets (e.g., CUDA, Metal, CPU)"
+  
+  - name: supports_quant
+    type: array
+    items:
+      type: string
+    description: "Supported quantization formats (e.g., IQ3_XXS, Q4_K_M)"
+
+relationships:
+  - type: implements
+    target: RuntimeInterface
+    description: "A Runtime implements the Athenas Runtime Interface"
+  
+  - type: executes
+    target: Model
+    description: "A Runtime executes Models and Quants"
+  
+  - type: profiled_by
+    target: Profile
+    description: "A Runtime can be configured via Profiles"
+
+lifecycle:
+  - Registered
+  - Compatible
+  - Tested
+  - Deprecated

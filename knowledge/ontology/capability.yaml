@@ -1,0 +1,60 @@
+# Capability Ontology
+# Defines the Capability entity — a measurable functionality a Model can perform.
+
+entity: Capability
+description: >
+  A measurable functionality that a Model can perform.
+  Capabilities are the unit of certification in Athenas.
+  Instead of saying "this model is good", we say "this model supports Capability X with score Y".
+
+properties:
+  - name: id
+    type: string
+    pattern: "^CAP-\\d{4}$"
+    required: true
+  
+  - name: name
+    type: string
+    required: true
+    description: "Capability name (e.g., Reasoning, OCR, Tool Calling, Vision)"
+  
+  - name: description
+    type: string
+    description: "What the capability entails and how it is measured"
+  
+  - name: measurement_method
+    type: string
+    description: "How this capability is benchmarked (e.g., MMLU, HumanEval)"
+
+standard_capabilities:
+  - Reasoning
+  - OCR
+  - Tool Calling
+  - Vision
+  - Embedding
+  - RAG
+  - Long Context (>100K tokens)
+  - Streaming
+  - Function Calling
+  - JSON Mode
+  - Multimodal
+  - Code Generation
+
+relationships:
+  - type: measured_by
+    target: Benchmark
+    description: "A capability is measured by specific benchmarks"
+  
+  - type: supported_by
+    target: Model
+    description: "A capability is supported by specific Models"
+  
+  - type: validated_in
+    target: Evidence
+    description: "Capability claims require evidence"
+
+lifecycle:
+  - Proposed
+  - Measurable
+  - Standardized
+  - Deprecated

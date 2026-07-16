@@ -1,0 +1,80 @@
+# Benchmark Ontology
+# Defines the Benchmark entity — a repeatable measurement procedure.
+
+entity: Benchmark
+description: >
+  A repeatable measurement procedure. A Benchmark is a contract:
+  Input → Execution → Metrics → Evidence → Certification.
+  Every benchmark must be reproducible: running BENCH-0007 tomorrow
+  must produce the same result.
+
+properties:
+  - name: id
+    type: string
+    pattern: "^BENCH-\\d{4}$"
+    required: true
+  
+  - name: title
+    type: string
+    required: true
+  
+  - name: capability
+    type: string
+    description: "Which capability this benchmark measures"
+  
+  - name: hardware
+    type: string
+    required: true
+    description: "Full hardware specification (GPU, CPU, RAM, driver versions)"
+  
+  - name: runtime
+    type: string
+    description: "Runtime name and version used"
+  
+  - name: model
+    type: string
+    description: "Model name and quant used"
+  
+  - name: confidence
+    type: number
+    minimum: 0.0
+    maximum: 1.0
+    description: "Statistical confidence in the benchmark results"
+
+reproducibility:
+  required_fields:
+    - commit hash
+    - runtime version
+    - CUDA version
+    - driver version
+    - model hash
+    - GGUF hash
+    - GPU temperature
+    - RAM usage
+    - swap usage
+    - profile used
+    - samplers
+    - reproducibility hash
+
+relationships:
+  - type: validates
+    target: Capability
+    description: "A benchmark measures a capability"
+  
+  - type: produces
+    target: Evidence
+    description: "A benchmark produces evidence"
+  
+  - type: requires
+    target: Runtime
+    description: "A benchmark requires a specific runtime"
+  
+  - type: targets
+    target: Model
+    description: "A benchmark targets specific models"
+
+lifecycle:
+  - Draft
+  - Calibrated
+  - Published
+  - Superseded

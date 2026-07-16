@@ -1,0 +1,76 @@
+# Profile Ontology
+# Defines the Profile entity — an execution policy for Runtime + Model.
+
+entity: Profile
+description: >
+  An execution policy. A Profile specifies how a Model/Quant is executed
+  on a Runtime. It is NOT the model itself — it is the policy that governs
+  execution. The same model with different profiles behaves completely differently.
+
+properties:
+  - name: id
+    type: string
+    pattern: "^PROFILE-\\d{4}$"
+    required: true
+  
+  - name: name
+    type: string
+    required: true
+    description: "Profile name (e.g., Research Profile, Coding Profile)"
+  
+  - name: purpose
+    type: string
+    description: "Use case this profile optimizes for"
+  
+  - name: max_context
+    type: integer
+    description: "Maximum context length in tokens"
+  
+  - name: temperature
+    type: number
+    minimum: 0.0
+    maximum: 2.0
+    description: "Sampling temperature"
+  
+  - name: speculative_decoding
+    type: boolean
+    description: "Whether speculative decoding is enabled"
+  
+  - name: grammar
+    type: string
+    description: "Grammar constraint (if applicable)"
+  
+  - name: batch_size
+    type: integer
+    description: "Inference batch size"
+
+examples:
+  - name: Research Profile
+    params:
+      max_context: 262144
+      temperature: 0.3
+      parallel: 1
+  
+  - name: Coding Profile
+    params:
+      max_context: 65536
+      temperature: 0.15
+      speculative_decoding: true
+
+relationships:
+  - type: targets
+    target: Model
+    description: "A profile targets a specific Model/Quant"
+  
+  - type: runs_on
+    target: Runtime
+    description: "A profile runs on a specific Runtime"
+  
+  - type: validated_by
+    target: Evidence
+    description: "A profile is validated by benchmarks"
+
+lifecycle:
+  - Draft
+  - Active
+  - Deprecated

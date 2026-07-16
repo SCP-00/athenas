@@ -1,0 +1,65 @@
+# Experiment Ontology
+# Defines the Experiment entity — a structured investigation procedure.
+
+entity: Experiment
+description: >
+  A structured investigation following the Athenas cycle.
+  Every experiment begins with a Question and ends with Knowledge.
+  Experiments are the unit of scientific method in Athenas.
+
+properties:
+  - name: id
+    type: string
+    pattern: "^EXP-\\d{4}$"
+    required: true
+  
+  - name: question
+    type: string
+    required: true
+    description: "The question this experiment aims to answer"
+  
+  - name: hypothesis
+    type: string
+    description: "The hypothesis being tested"
+  
+  - name: methodology
+    type: string
+    description: "How the experiment was conducted"
+  
+  - name: observations
+    type: string
+    description: "What was observed during the experiment"
+  
+  - name: conclusion
+    type: string
+    description: "What was learned"
+
+cycle:
+  steps:
+    - Question
+    - Hypothesis
+    - Evidence Collection
+    - Experiment Execution
+    - Observation
+    - Analysis
+    - Decision
+    - Knowledge
+
+relationships:
+  - type: tests
+    target: Hypothesis
+    description: "An experiment tests a hypothesis"
+  
+  - type: produces
+    target: Evidence
+    description: "An experiment produces evidence"
+  
+  - type: informed_by
+    target: Question
+    description: "An experiment is motivated by a question"
+
+lifecycle:
+  - Designed
+  - Running
+  - Complete
+  - Published

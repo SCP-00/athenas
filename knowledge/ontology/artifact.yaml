@@ -1,0 +1,47 @@
+# Artifact Ontology
+# Defines the Artifact entity — any output produced by the compiler or runtime.
+
+entity: Artifact
+description: >
+  Any output produced by the Athenas system.
+  Artefacts are NOT logs — they are structured, versioned, and consumable
+  by both humans and agents. Examples: benchmark.json, dashboard.html,
+  summary.md, metrics.csv.
+
+properties:
+  - name: id
+    type: string
+    pattern: "^ART-\\d{4}$"
+    required: true
+  
+  - name: name
+    type: string
+    description: "Artifact filename or identifier"
+    required: true
+  
+  - name: format
+    type: string
+    enum: [JSON, YAML, HTML, CSV, SVG, PNG, PDF, Markdown]
+    description: "Artifact format"
+  
+  - name: producer
+    type: string
+    description: "What produced this artifact (compiler, runtime, benchmark)"
+  
+  - name: source
+    type: string
+    description: "What input produced this artifact"
+
+relationships:
+  - type: produced_by
+    target: Compiler
+    description: "An artifact is produced by a compiler pass"
+  
+  - type: consumed_by
+    target: Dashboard
+    description: "An artifact is consumed by the dashboard or external tools"
+
+lifecycle:
+  - Generated
+  - Published
+  - Archived

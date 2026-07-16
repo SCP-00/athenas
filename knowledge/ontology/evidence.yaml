@@ -1,0 +1,60 @@
+# Evidence Ontology
+# Defines the Evidence entity — a validated experimental result.
+# Evidence is the atomic unit of proof in Athenas. Every claim
+# must be supported by Evidence with a confidence score.
+
+entity: Evidence
+description: >
+  A validated experimental result. Evidence is the atomic unit of proof
+  in Athenas. Every claim must be supported by Evidence.
+  Evidence is probabilistic — it carries a confidence score (0.0-1.0)
+  and can be updated as more data is collected.
+
+properties:
+  - name: id
+    type: string
+    pattern: "^EVID-\\d{4}$"
+    required: true
+  
+  - name: claim
+    type: string
+    required: true
+    description: "The specific claim this evidence supports or refutes"
+  
+  - name: confidence
+    type: number
+    minimum: 0.0
+    maximum: 1.0
+    required: true
+    description: "Statistical confidence in the claim"
+  
+  - name: source
+    type: string
+    pattern: "^(BENCH|EXP)-\\d{4}$"
+    description: "Source benchmark or experiment that produced this evidence"
+  
+  - name: hardware
+    type: string
+    description: "Hardware conditions under which evidence was collected"
+  
+  - name: conditions
+    type: string
+    description: "Experimental conditions (temperature, context length, etc.)"
+
+relationships:
+  - type: supports
+    target: Claim
+    description: "Evidence supports or refutes a specific claim"
+  
+  - type: produced_by
+    target: Benchmark
+    description: "Evidence is produced by a benchmark"
+  
+  - type: aggregated_in
+    target: EvidencePackage
+    description: "Evidence items are aggregated into evidence packages"
+
+lifecycle:
+  - Collected
+  - Validated
+  - Superseded
