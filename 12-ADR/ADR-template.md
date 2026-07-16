@@ -4,7 +4,7 @@ title: Architecture Decision Record Template
 author: [Author]
 date: YYYY-MM-DD
 status: Draft
-version: 1.0
+version: 1.0.0
 authority: Level 4 — Architecture
 supersedes: []
 related: []
