@@ -135,11 +135,34 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_find_markdown_files() {
-        let files = find_markdown_files(Path::new("."));
-        assert!(
-            !files.is_empty(),
-            "Should find at least some markdown files"
-        );
+    fn test_parse_front_matter() {
+        // Test front-matter parsing from a string
+        let content = "---\nid: TEST-0001\ntitle: Test\ndate: 2026-01-01\nstatus: Draft\n---\n\nBody content";
+        let tmp = std::env::temp_dir().join("ath-test-parse");
+        let _ = std::fs::create_dir_all(&tmp);
+        let file_path = tmp.join("TEST-0001.md");
+        std::fs::write(&file_path, content).unwrap();
+
+        let result = parse_document(&file_path, &tmp).unwrap();
+        assert!(result.is_some(), "Should parse valid front-matter");
+        let doc = result.unwrap();
+        assert_eq!(doc.id, "TEST-0001");
+        assert_eq!(doc.body, "Body content");
+
+        let _ = std::fs::remove_dir_all(&tmp);
+    }
+
+    #[test]
+    fn test_skip_no_front_matter() {
+        let content = "# No front matter\n\nJust a regular markdown file.";
+        let tmp = std::env::temp_dir().join("ath-test-nofm");
+        let _ = std::fs::create_dir_all(&tmp);
+        let file_path = tmp.join("plain.md");
+        std::fs::write(&file_path, content).unwrap();
+
+        let result = parse_document(&file_path, &tmp).unwrap();
+        assert!(result.is_none(), "Should skip files without front-matter");
+
+        let _ = std::fs::remove_dir_all(&tmp);
     }
 }
