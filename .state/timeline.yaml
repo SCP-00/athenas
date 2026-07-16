@@ -1,0 +1,45 @@
+# Athenas Project Timeline
+# Chronological record of significant project events.
+# Agents: This is the canonical source for "what changed."
+
+events:
+  - date: 2026-07-16
+    type: milestone
+    description: "Project Genesis — repository initialized, founding documents created"
+    artifacts:
+      - CONST-0001 (Draft)
+      - DIRECTIVE-0001 (Approved)
+      - BOOTSTRAP-0001 (Active)
+      - COMPILER-0001 (Draft)
+      - knowledge.md (INDEX-0001)
+      - knowledge/ontology.yaml + 10 entity schemas
+      - .state/project.yaml + supporting state files
+      - crates/athenas-compiler/ (Rust compiler)
+      - site/ (Astro dashboard)
+      - 8 document templates
+      - .github/workflows/ (8 CI/CD workflows)
+
+  - date: 2026-07-16
+    type: architecture
+    description: "Knowledge Compiler pipeline specified (COMPILER-0001)"
+    detail: "7-pass pipeline: Reader → Parser → Schema Validator → ID Resolver → Reference Resolver → Semantic Validator → Artifact Generator"
+
+  - date: 2026-07-16
+    type: decision
+    description: "Adopt engineering-first methodology (DIRECTIVE-0001)"
+    detail: "28 engineering directives established for all contributors"
+
+  - date: 2026-07-16
+    type: decision
+    description: "Ontology-based knowledge modeling adopted"
+    detail: "15 entities defined with explicit relationships in knowledge/ontology.yaml and knowledge/ontology/"
+
+  - date: 2026-07-16
+    type: milestone
+    description: "VISION-0001 created — objectives hierarchy established"
+    detail: "Vision → Mission → 4 Strategic Objectives → 8 Milestones → Epics → Features → Tasks"
+
+  - date: 2026-07-16
+    type: cleanup
+    description: "Git history purged — removed target/ and .knowledge/ from all commits"
+    detail: ".git/ reduced from 148MB to 364KB. 73 source files remain."

@@ -1,0 +1,32 @@
+# Requirement Entity
+# Part of the Athenas Ontology
+
+Requirement:
+  id: ONT-0020
+  description: >
+    A documented need that the Athenas system must fulfill. Requirements
+    are the bridge between Vision and Specification. Every REQ document
+    describes a single, testable requirement.
+  examples:
+    - "The system must support at least 3 concurrent inference requests"
+    - "Model switching must complete within 5 seconds"
+    - "All benchmarks must be reproducible within 5% variance"
+  properties:
+    - id (REQ-NNNN)
+    - title
+    - description
+    - priority (Critical | High | Medium | Low)
+    - source (which stakeholder or document identified this need)
+    - verification_method (test | benchmark | review)
+    - status (Draft | Approved | Implemented | Verified | Superseded)
+  related:
+    - Vision: "Requirements derive from Vision"
+    - Specification: "Requirements are specified by SPEC documents"
+    - Architecture: "Requirements constrain Architecture"
+    - Benchmark: "Requirements are verified by Benchmarks"
+  relationships:
+    derived_from: Vision
+    specified_by: Specification
+    implemented_by: Architecture
+    verified_by: Benchmark
+    superseded_by: Requirement

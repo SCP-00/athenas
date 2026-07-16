@@ -1,64 +1,98 @@
 # Athenas Project State
 # Agents and developers READ THIS FIRST to understand current status.
 
+# ── Phase & Version ──────────────────────────────────────────
 phase: Genesis
 version: 0.1.0
 
+# ── Active Focus ─────────────────────────────────────────────
 current_document: CONST-0001
 current_branch: develop
 
+# ── Milestone ────────────────────────────────────────────────
 active_milestone: M0
 active_epic: Engineering Foundation
 
+# ── Blockers ────────────────────────────────────────────────
 blocked: false
 blocker: null
 
-next_task: Approve CONST-0001 (Review → Approved)
-last_completed: Knowledge Index
-last_validation: none
-last_benchmark: none
-last_architecture_decision: 2026-07-16
+# ── Completion Tracking ─────────────────────────────────────
+completion:
+  overall: 12             # percentage 0-100
+  constitution: 80        # CONST-0001
+  vision: 100             # VISION-0001
+  requirements: 0
+  specifications: 10      # COMPILER-0001
+  architecture: 0
+  adr: 0
+  benchmarks: 0
+  models: 0
+  profiles: 0
+  experiments: 0
+  ontology: 90            # 15/17 entity types defined
+  compiler: 30            # Spec done, implementation in progress
+  site: 20                # Astro scaffolded, content pending
+  workflows: 80           # 7/8 workflows operational
 
+# ── Tasks ──────────────────────────────────────────────────
+next_task: "Complete CONST-0001 (Articles III–IV, missing sections)"
+last_completed: "Knowledge Index + Ontology + Compiler Spec"
+last_validation: "2026-07-16 — all schemas valid, compiler builds"
+last_benchmark: none
+last_architecture_decision: "2026-07-16 — Engineering-first methodology"
+
+# ── Sprint ──────────────────────────────────────────────────
 active_sprint:
   number: 0
-  goal: Establish engineering foundations
+  goal: "Establish engineering foundations — Constitution, Ontology, Compiler, Dashboard"
   start: 2026-07-16
   end: TBD
 
+# ── Milestone Roadmap ───────────────────────────────────────
 milestones:
   M0:
     name: Genesis
-    description: Constitution, Bootstrap, Knowledge System
+    description: "Constitution, Bootstrap, Knowledge System, Ontology, Compiler Spec"
     status: active
+    completion: 25        # percentage
   M1:
     name: Runtime Core
-    description: Registry, Profiles, Providers
+    description: "Registry, Profiles, Providers"
     status: planned
+    completion: 0
   M2:
     name: Benchmark Engine
-    description: Automated benchmarking pipeline
+    description: "Automated benchmarking pipeline"
     status: planned
+    completion: 0
   M3:
     name: Certification
-    description: Model certification pipeline
+    description: "Model certification pipeline"
     status: planned
+    completion: 0
   M4:
     name: Dashboard
-    description: Web dashboard for monitoring
+    description: "Web dashboard for monitoring"
     status: planned
+    completion: 0
   M5:
     name: Agent Platform
-    description: Agent orchestration engine
+    description: "Agent orchestration engine"
     status: planned
+    completion: 0
   M6:
     name: Plugin Ecosystem
-    description: Third-party plugin system
+    description: "Third-party plugin system"
     status: planned
+    completion: 0
   M7:
     name: Public Release
-    description: Stable public launch
+    description: "Stable public launch"
     status: planned
+    completion: 0
 
+# ── Document Inventory ──────────────────────────────────────
 document_counts:
   constitution: 1
   vision: 0

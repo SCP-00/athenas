@@ -1,0 +1,28 @@
+# Observation Entity
+# Part of the Athenas Ontology
+
+Observation:
+  id: ONT-0019
+  description: >
+    A raw, unstructured record of what was observed during an experiment
+    or benchmark. Observations are the atomic data points that precede
+    structured Evidence. Unlike Evidence, Observations have no confidence
+    score — they are raw data.
+  examples:
+    - "TTFT fluctuated between 120ms and 450ms during the first 10 runs"
+    - "GPU temperature peaked at 82°C under continuous load"
+    - "Model output quality degraded noticeably at context > 64K"
+  properties:
+    - timestamp
+    - source (experiment_id, benchmark_id)
+    - observer (human or agent)
+    - data (free-form text or structured data)
+    - tags
+  related:
+    - Experiment: "Observations are produced by Experiments"
+    - Evidence: "Observations can be promoted to Evidence after validation"
+    - Decision: "Observations inform Decisions"
+  relationships:
+    produced_by: Experiment
+    promoted_to: Evidence (optional)
+    informs: Decision

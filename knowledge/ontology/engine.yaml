@@ -1,0 +1,30 @@
+# Engine Entity
+# Part of the Athenas Ontology
+
+Engine:
+  id: ONT-0016
+  description: >
+    A concrete implementation of a Runtime Interface. While a Runtime is
+    an abstract capability (e.g., "text generation"), an Engine is the
+    specific software that provides that capability (e.g., "llama.cpp
+    commit a1b2c3d").
+  examples:
+    - llama.cpp (commit a1b2c3d)
+    - vLLM (v0.8.3)
+    - MLX (v0.21.0)
+  properties:
+    - name
+    - version
+    - commit_hash
+    - runtime_interface_version
+    - supported_hardware
+    - supported_quantizations
+    - provider_implementation
+  related:
+    - Runtime: "An Engine implements a Runtime Interface"
+    - Profile: "A Profile targets a specific Engine"
+    - Benchmark: "Benchmarks run on specific Engines"
+  relationships:
+    implements: Runtime
+    validated_by: Benchmark
+    configured_by: Profile

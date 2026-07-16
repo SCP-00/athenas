@@ -1,0 +1,32 @@
+# Architecture Entity
+# Part of the Athenas Ontology
+
+Architecture:
+  id: ONT-0021
+  description: >
+    A structural design that describes how components of Athenas interact.
+    Architecture documents (ARCH-*) specify interfaces, data flow, module
+    boundaries, and system constraints. Architecture is the bridge between
+    Specification and Implementation.
+  examples:
+    - Runtime Architecture (interfaces, providers, registry)
+    - Compiler Architecture (pipeline, passes, IR)
+    - Dashboard Architecture (data flow, components)
+  properties:
+    - id (ARCH-NNNN)
+    - title
+    - scope (which subsystem)
+    - interfaces (list of defined interfaces)
+    - components (list of components)
+    - data_flow (how data moves between components)
+    - constraints (architectural constraints)
+    - status (Draft | Review | Approved | Superseded)
+  related:
+    - Specification: "Architecture implements Specification"
+    - Implementation: "Architecture guides Implementation"
+    - Decision: "Architecture decisions are recorded as ADRs"
+  relationships:
+    implements: Specification
+    guided_by: Decision
+    constrains: Implementation
+    superseded_by: Architecture

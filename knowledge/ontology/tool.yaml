@@ -1,0 +1,34 @@
+# Tool Entity
+# Part of the Athenas Ontology
+
+Tool:
+  id: ONT-0018
+  description: >
+    An executable procedure with defined inputs, outputs, contracts, and
+    error modes. Tools are the unit of automation in Athenas. Unlike a
+    generic "script", a Tool has a formal interface specification.
+  examples:
+    - benchmark-runner
+    - model-downloader
+    - certification-pipeline
+    - profile-validator
+    - knowledge-graph-builder
+  properties:
+    - name
+    - version
+    - interface:
+        inputs: list
+        outputs: list
+        contracts: list
+        errors: list
+    - language
+    - runtime_dependencies
+    - source_location
+  related:
+    - Agent: "Agents invoke Tools"
+    - ExecutionUnit: "A Tool is an ExecutionUnit with a formal interface"
+    - Task: "A Tool implements a Task"
+  relationships:
+    used_by: Agent
+    implements: Task
+    configured_by: Profile

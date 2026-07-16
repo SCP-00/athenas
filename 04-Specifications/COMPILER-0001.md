@@ -6,6 +6,23 @@ date: 2026-07-16
 status: Draft
 version: 0.1.0
 authority: Level 3 — Specification
+completion: 30
+missing_sections:
+  - Pass 8–12 (future: HTML, Search, PDF, LLM Context, Graph DB)
+  - CLI error code specifications
+review_status: Pending
+implements:
+  - CONST-0001: "Article VI — Knowledge Graph automation"
+elaborates_on:
+  - ONT-0024: "Compiler entity definition"
+depends_on: []
+validated_by: []
+derived_from:
+  - ARCH-idea: "Chatty's architectural vision for knowledge compilation"
+supersedes: []
+related:
+  - knowledge/ontology.yaml: "Compiler validates against ontology"
+  - crates/athenas-compiler/: "Rust implementation"
 tags:
   - compiler
   - architecture

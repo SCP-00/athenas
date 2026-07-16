@@ -1,0 +1,32 @@
+# Decision Entity
+# Part of the Athenas Ontology
+
+Decision:
+  id: ONT-0022
+  description: >
+    A recorded architectural or engineering decision. Decisions are the
+    memory of the project. Every Decision must document: what was decided,
+    why, what alternatives were considered, what evidence supports it,
+    and when it might be reversed.
+  examples:
+    - "Adopt engineering-first methodology"
+    - "Use Rust for the Knowledge Compiler"
+    - "Use Astro for the documentation dashboard"
+  properties:
+    - date
+    - decision (what was decided)
+    - rationale (why)
+    - alternatives (list of options considered and rejected)
+    - evidence (links to BENCH, EVID, EXP)
+    - reversibility_conditions (when would we revert)
+    - status (Active | Reversed | Superseded)
+  related:
+    - Architecture: "Decisions shape Architecture"
+    - Specification: "Decisions justify Specifications"
+    - Evidence: "Decisions must be supported by Evidence"
+    - ADR: "Decisions are recorded as ADR documents"
+  relationships:
+    shapes: Architecture
+    justifies: Specification
+    supported_by: Evidence
+    recorded_in: ADR

@@ -1,0 +1,34 @@
+# Compiler Entity
+# Part of the Athenas Ontology
+
+Compiler:
+  id: ONT-0024
+  description: >
+    The Athenas Knowledge Compiler (`ath`). It does not compile code — it
+    compiles knowledge. Markdown documents with YAML front-matter are the
+    source language. The compiler transforms them through a pipeline into
+    structured knowledge artifacts: Knowledge Graph, Search Index,
+    Cross-References, Timeline, Ontology, and Diagnostic Reports.
+  examples:
+    - ath build (full pipeline)
+    - ath validate (fast validation)
+    - ath graph (knowledge graph generation)
+    - ath doctor (diagnostics)
+  properties:
+    - version
+    - pipeline_passes (list of Pass specifications)
+    - input_formats (Markdown + YAML)
+    - output_formats (JSON, HTML, Search Index)
+    - language (Rust)
+    - status (Specification | Implementation | Stable)
+  related:
+    - KnowledgeGraph: "The Compiler builds the Knowledge Graph"
+    - Document: "The Compiler processes Documents"
+    - Ontology: "The Compiler validates against the Ontology"
+    - Dashboard: "The Compiler generates data for the Dashboard"
+  relationships:
+    processes: Document
+    builds: [KnowledgeGraph, Index, Search, Timeline]
+    validates_against: Ontology
+    feeds: Dashboard
+    specified_by: COMPILER-0001

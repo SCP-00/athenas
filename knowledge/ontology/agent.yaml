@@ -1,0 +1,32 @@
+# Agent Entity
+# Part of the Athenas Ontology
+
+Agent:
+  id: ONT-0017
+  description: >
+    An autonomous software entity that performs engineering tasks within
+    Athenas. Agents are first-class citizens — they read documents, make
+    decisions, record evidence, and propose changes. An Agent may be
+    an AI (LLM-based), a script, or a human-in-the-loop.
+  examples:
+    - Code Reviewer Agent (reviews PRs)
+    - Benchmark Runner Agent (executes BENCH-*)
+    - Certification Agent (evaluates evidence packages)
+    - Bootstrap Agent (onboards new contributors)
+  properties:
+    - name
+    - type (AI | script | human)
+    - capabilities (list of supported tasks)
+    - authority_level (what documents it can modify)
+    - context_window (for AI agents)
+    - model (which model powers the agent)
+  related:
+    - Tool: "Agents use Tools"
+    - Task: "Agents execute Tasks"
+    - Decision: "Agents record Decisions"
+    - Evidence: "Agents produce Evidence"
+  relationships:
+    executes: Task
+    uses: Tool
+    produces: [Decision, Evidence, Document]
+    governed_by: [CONST-0001, DIRECTIVE-0001]

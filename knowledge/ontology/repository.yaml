@@ -1,0 +1,27 @@
+# Repository Entity
+# Part of the Athenas Ontology
+
+Repository:
+  id: ONT-0023
+  description: >
+    A version-controlled collection of knowledge and code. The primary
+    Repository is the Athenas monorepo. Secondary Repositories may exist
+    for plugins, provider implementations, or external integrations.
+  examples:
+    - github.com/SCP-00/athenas (primary)
+    - athenas-plugins (future)
+    - athenas-providers (future)
+  properties:
+    - url
+    - type (primary | plugin | provider | tool)
+    - branch_strategy (main → develop → feature)
+    - ci_status
+    - documentation_location
+  related:
+    - All entities: "The Repository contains all Athenas entities"
+    - Agent: "Agents interact through the Repository"
+    - Tool: "Repository may contain Tools"
+  relationships:
+    contains: [Document, Model, Profile, Benchmark, Tool, Agent, Compiler]
+    orchestrated_by: Agent
+    built_by: Compiler

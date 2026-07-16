@@ -4,8 +4,22 @@ title: The Athenas Constitution
 author: Chief Software Architect
 date: 2026-07-16
 status: Draft
-version: 0.1.0
+version: 0.2.0
 authority: Level 0 — Constitution
+completion: 80
+missing_sections:
+  - Article III (detailed completion criteria)
+  - Article IV (exception process)
+review_status: Pending
+implements: []
+depends_on: []
+validated_by: []
+derived_from: []
+supersedes: []
+related:
+  - VISION-0001: "Foundation for all Athenas activity"
+  - DIRECTIVE-0001: "Operationalizes engineering principles"
+  - BOOTSTRAP-0001: "Entry point for all contributors"
 ---
 
 # CONST-0001 — The Athenas Constitution
