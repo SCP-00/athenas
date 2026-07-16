@@ -175,6 +175,23 @@ enum Commands {
         action: WorkspaceAction,
     },
 
+    /// Build knowledge packs from providers (man, help, etc.)
+    Knowledge {
+        /// Provider to use (e.g. "man")
+        provider: String,
+
+        /// Query to pass to the provider (e.g. "go-build")
+        query: String,
+
+        /// Output directory for the generated pack YAML
+        #[arg(short, long, default_value = ".knowledge/packs")]
+        output: PathBuf,
+
+        /// Output structured JSON report
+        #[arg(short, long)]
+        json: bool,
+    },
+
     /// Full pipeline: validate + graph + all artifacts (project.yaml, index, search, crossrefs)
     Build {
         /// Path to the project root (defaults to current directory)
@@ -578,6 +595,75 @@ fn run_workspace(action: &WorkspaceAction) -> anyhow::Result<i32> {
         }
     }
     Ok(0)
+}
+
+fn run_knowledge_build(provider_name: &str, query: &str, output_dir: &Path, json_output: bool) -> anyhow::Result<i32> {
+    use runtime::knowledge_ir;
+
+    println!("╔══════════════════════════════════════════╗");
+    println!("║     Athenas Knowledge Builder             ║");
+    println!("╚══════════════════════════════════════════╝");
+    println!();
+    println!("  Provider: {provider_name}");
+    println!("  Query:    {query}");
+    println!();
+
+    match provider_name {
+        "man" => {
+            let provider = runtime::providers::man_provider::ManProvider::new();
+            let (ir, pack) = runtime::knowledge::build_knowledge(&provider, query)
+                .map_err(|e| anyhow::anyhow!("Build failed: {e}"))?;
+
+            // Write IR as JSON
+            std::fs::create_dir_all(output_dir)?;
+            let ir_path = output_dir.join(format!("{}-ir.json", query.replace(' ', "-")));
+            std::fs::write(&ir_path, serde_json::to_string_pretty(&ir)?)?;
+
+            // Write pack as YAML
+            let pack_path = output_dir.join(format!("{}.yaml", query.replace(' ', "-")));
+            std::fs::write(&pack_path, serde_yaml::to_string(&pack)?)?;
+
+            if json_output {
+                let report = serde_json::json!({
+                    "provider": provider_name,
+                    "query": query,
+                    "ir": ir,
+                    "pack": pack,
+                });
+                println!("{}", serde_json::to_string_pretty(&report)?);
+            } else {
+                println!();
+                println!("📊 Build Report");
+                println!("{}", "─".repeat(50));
+                println!("  Raw bytes:       {}", ir.metrics.raw_bytes);
+                println!("  Items extracted: {}", ir.metrics.items_extracted);
+                println!("  Dedup removed:   {}", ir.metrics.dedup_removed);
+                println!("  Validation:      {}", if ir.validation.valid { "✓ PASS" } else { "✖ FAIL" });
+                println!("  Compile time:    {:.0} ms", ir.metrics.compile_time_ms);
+                println!();
+                println!("  Knowledge items by type:");
+                let mut kind_counts: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
+                for item in &ir.items {
+                    *kind_counts.entry(item.kind.to_string()).or_insert(0) += 1;
+                }
+                let mut sorted: Vec<_> = kind_counts.into_iter().collect();
+                sorted.sort_by(|a, b| b.1.cmp(&a.1));
+                for (kind, count) in &sorted {
+                    println!("    {kind:20}: {count}");
+                }
+                println!();
+                println!("  📁 IR:     {}", ir_path.display());
+                println!("  📦 Pack:   {}", pack_path.display());
+            }
+
+            Ok(0)
+        }
+        _ => {
+            anyhow::bail!(
+                "Unknown provider '{provider_name}'. Available providers: man"
+            );
+        }
+    }
 }
 
 fn run_doctor(json_output: bool) -> anyhow::Result<i32> {
@@ -1031,6 +1117,16 @@ fn main() -> anyhow::Result<()> {
 
         Some(Commands::Workspace { action }) => {
             let exit_code = run_workspace(action)?;
+            std::process::exit(exit_code);
+        }
+
+        Some(Commands::Knowledge {
+            provider,
+            query,
+            output,
+            json,
+        }) => {
+            let exit_code = run_knowledge_build(provider, query, output, *json)?;
             std::process::exit(exit_code);
         }
 

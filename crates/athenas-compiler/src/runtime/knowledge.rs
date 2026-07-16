@@ -1,6 +1,8 @@
+use crate::runtime::knowledge_ir::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
+use std::time::Instant;
 
 /// A versioned, composable knowledge package for a language/tool/domain
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -191,6 +193,142 @@ pub fn build_system_prompt(pack: &KnowledgePack, custom_instructions: Option<&st
     }
 
     lines.join("\n")
+}
+
+// ---------------------------------------------------------------------------
+// KnowledgeProvider trait — each provider implements this
+// Notice: NO compile() method. Compilation belongs to the compiler.
+// ---------------------------------------------------------------------------
+
+pub trait KnowledgeProvider {
+    fn id(&self) -> &str;
+    fn discover(&self, query: &str) -> Result<Vec<KnowledgeSource>, String>;
+    fn fetch(&self, source: &KnowledgeSource) -> Result<RawKnowledge, String>;
+    fn validate(&self, raw: &RawKnowledge) -> Result<ValidationReport, String>;
+    fn normalize(&self, raw: RawKnowledge) -> Result<KnowledgeIR, String>;
+}
+
+// ---------------------------------------------------------------------------
+// Knowledge Compiler — transforms KnowledgeIR into compiled artifacts
+// This is the ONLY place that creates KnowledgePack from IR.
+// Providers never know about KnowledgePack.
+// ---------------------------------------------------------------------------
+
+/// Compile KnowledgeIR into a KnowledgePack
+pub fn compile_ir_to_pack(ir: KnowledgeIR) -> KnowledgePack {
+    let mut knowledge = Vec::new();
+    let mut tools = Vec::new();
+    let mut prompts = HashMap::new();
+
+    for item in &ir.items {
+        // Knowledge items
+        knowledge.push(KnowledgeItem {
+            title: item.title.clone(),
+            content: item.content.clone(),
+        });
+    }
+
+    // Build a system prompt from the IR
+    let synopsis: Vec<&str> = ir.items.iter().filter(|i| matches!(i.kind, KnowledgeKind::Synopsis)).map(|i| i.content.as_str()).collect();
+    let description: Vec<&str> = ir.items.iter().filter(|i| matches!(i.kind, KnowledgeKind::Description)).map(|i| i.content.as_str()).collect();
+    let options: Vec<&str> = ir.items.iter().filter(|i| matches!(i.kind, KnowledgeKind::Option)).map(|i| i.content.as_str()).collect();
+    let examples: Vec<&str> = ir.items.iter().filter(|i| matches!(i.kind, KnowledgeKind::Example)).map(|i| i.content.as_str()).collect();
+
+    if !synopsis.is_empty() || !description.is_empty() {
+        let mut system = String::new();
+        system.push_str("You are an expert in ");
+        system.push_str(&ir.source.query);
+        system.push_str(". Here is the official reference documentation:\n\n");
+        if !description.is_empty() {
+            system.push_str(&description.join("\n\n"));
+            system.push_str("\n\n");
+        }
+        if !options.is_empty() {
+            system.push_str("Available options:\n");
+            for opt in &options {
+                system.push_str(&format!("- {opt}\n"));
+            }
+            system.push('\n');
+        }
+        if !examples.is_empty() {
+            system.push_str("Examples:\n");
+            for ex in &examples {
+                system.push_str(&format!("{ex}\n"));
+            }
+        }
+        prompts.insert("system".to_string(), system);
+    }
+
+    KnowledgePack {
+        id: format!("pack-{}", ir.provider),
+        name: format!("{} Knowledge", ir.source.title),
+        version: "1.0.0".to_string(),
+        description: format!("Generated from {}: {}", ir.provider, ir.source.query),
+        tags: ir.source.tags.clone(),
+        depends_on: vec![],
+        languages: ir.source.language.clone().map(|l| vec![l]).unwrap_or_default(),
+        tools,
+        prompts,
+        knowledge,
+        benchmarks: vec![],
+    }
+}
+
+/// Full pipeline: discover → fetch → validate → normalize → compile
+pub fn build_knowledge<P: KnowledgeProvider>(
+    provider: &P,
+    query: &str,
+) -> Result<(KnowledgeIR, KnowledgePack), String> {
+    let start = Instant::now();
+
+    // Phase 1: Discover
+    println!("  🔍 Discovering sources for '{}'...", query);
+    let sources = provider.discover(query)?;
+    if sources.is_empty() {
+        return Err(format!("No sources found for '{query}'"));
+    }
+    println!("     Found {} source(s)", sources.len());
+
+    let mut combined_ir = None;
+
+    for source in &sources {
+        // Phase 2: Fetch
+        println!("  📥 Fetching '{}'...", source.title);
+        let raw = provider.fetch(source)?;
+        println!("     {} bytes", raw.content.len());
+
+        // Phase 3: Validate
+        let validation = provider.validate(&raw)?;
+        if !validation.valid {
+            for err in &validation.errors {
+                eprintln!("  ⚠ Validation error: {}", err.message);
+            }
+        }
+
+        // Phase 4: Normalize to IR
+        println!("  🔄 Normalizing...");
+        let mut ir = provider.normalize(raw)?;
+        ir.deduplicate();
+        println!("     {} items extracted", ir.metrics.items_extracted);
+        if ir.metrics.dedup_removed > 0 {
+            println!("     {} duplicates removed", ir.metrics.dedup_removed);
+        }
+
+        combined_ir = Some(ir);
+    }
+
+    let ir = combined_ir.ok_or_else(|| "No IR produced".to_string())?;
+
+    // Phase 5: Compile to pack
+    println!("  📦 Compiling pack...");
+    let pack = compile_ir_to_pack(ir.clone());
+
+    let elapsed = start.elapsed().as_secs_f64() * 1000.0;
+    println!("  ✅ Build completed in {:.0}ms", elapsed);
+    println!("     Pack ID: {}", pack.id);
+    println!("     Knowledge items: {}", pack.knowledge.len());
+
+    Ok((ir, pack))
 }
 
 /// Get the default packs directory
