@@ -1,0 +1,50 @@
+# Rust Workflow
+# Runs when Rust code changes: fmt, clippy, test, doc.
+
+name: Rust
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'crates/**/*.rs'
+      - 'crates/**/Cargo.toml'
+      - 'Cargo.toml'
+  pull_request:
+    branches: [develop]
+    paths:
+      - 'crates/**/*.rs'
+      - 'crates/**/Cargo.toml'
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: stable
+          components: clippy, rustfmt
+
+      - name: cargo fmt — check formatting
+        run: cargo fmt --manifest-path crates/athenas-compiler/Cargo.toml --check
+
+      - name: cargo clippy — lint
+        run: cargo clippy --manifest-path crates/athenas-compiler/Cargo.toml -- -D warnings
+
+      - name: cargo test — run tests
+        run: cargo test --manifest-path crates/athenas-compiler/Cargo.toml
+
+      - name: cargo doc — generate documentation
+        run: cargo doc --manifest-path crates/athenas-compiler/Cargo.toml --no-deps
+
+      - name: Build release binary
+        run: cargo build --manifest-path crates/athenas-compiler/Cargo.toml --release
+
+      - name: Verify binary
+        run: |
+          echo "## Rust Build" >> $GITHUB_STEP_SUMMARY
+          echo "- Binary: ath ($(file crates/athenas-compiler/target/release/ath | awk -F: '{print $2}'))" >> $GITHUB_STEP_SUMMARY
+          echo "- Size: $(du -h crates/athenas-compiler/target/release/ath | cut -f1)" >> $GITHUB_STEP_SUMMARY

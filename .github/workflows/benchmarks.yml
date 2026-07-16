@@ -1,0 +1,61 @@
+# Benchmarks Workflow
+# When runtime or compiler code changes, generates pending benchmark requests.
+# Benchmarks are not executed in CI (no GPU available) — they're tracked as
+# pending tasks for the local machine to execute.
+
+name: Benchmarks
+
+on:
+  pull_request:
+    branches: [develop]
+    paths:
+      - 'crates/**/*.rs'
+      - 'crates/**/Cargo.toml'
+      - '07-Runtime/**'
+      - '09-Validation/**'
+
+jobs:
+  request:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Analyze changes
+        id: analyze
+        run: |
+          echo "## Benchmark Request" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "This PR modifies code that may affect inference performance." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Affected areas" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          git diff --name-only origin/develop...HEAD 2>/dev/null || echo "Could not compute diff"
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### To run locally" >> $GITHUB_STEP_SUMMARY
+          echo '```bash' >> $GITHUB_STEP_SUMMARY
+          echo "# On your local machine with GPU:" >> $GITHUB_STEP_SUMMARY
+          echo "ath build --benchmark" >> $GITHUB_STEP_SUMMARY
+          echo "# Then upload results:" >> $GITHUB_STEP_SUMMARY
+          echo "# Copy .knowledge/benchmark-results.json to 09-Validation/" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
+      - name: Create benchmark issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = context.payload.pull_request?.number;
+            if (!prNumber) {
+              console.log('Not a PR — skipping issue creation');
+              return;
+            }
+            const body = `## Manual Benchmark Required\n\nThis PR (#${prNumber}) modifies code that affects inference performance.\n\n**To execute:**\n1. Checkout this branch on your local machine with GPU\n2. Run \`ath build --benchmark\`\n3. Upload results to \`09-Validation/\`\n\n**Affected files:**\n${context.payload.pull_request?.changed_files || 'Unknown'} files changed.`;
+            // Only label, don't create issue — just warn
+            github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              labels: ['benchmark-required']
+            });

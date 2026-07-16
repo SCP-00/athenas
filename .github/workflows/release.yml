@@ -1,0 +1,81 @@
+# Release Workflow
+# On tag v*: build binary, build site, create GitHub Release with assets.
+
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+  pages: read
+  id-token: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: stable
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Extract version
+        id: version
+        run: |
+          VERSION=${GITHUB_REF_NAME#v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "## Release $VERSION" >> $GITHUB_STEP_SUMMARY
+
+      - name: Build ath binary (release)
+        run: cargo build --manifest-path crates/athenas-compiler/Cargo.toml --release
+
+      - name: Build ath binary (Linux x86_64)
+        run: |
+          mkdir -p dist
+          cp crates/athenas-compiler/target/release/ath dist/ath-linux-x86_64
+          sha256sum dist/ath-linux-x86_64 > dist/ath-linux-x86_64.sha256
+
+      - name: Run compiler and build site
+        run: |
+          ./crates/athenas-compiler/target/release/ath
+          cd site && npm ci && npm run build && cd ..
+          cp -r site/dist dist/site
+
+      - name: Generate release notes
+        run: |
+          RELEASE_NOTES=$(cat << 'EOF'
+          # Athenas ${{ steps.version.outputs.version }}
+
+          ## Downloads
+
+          - **ath-${{ steps.version.outputs.version }}-linux-x86_64** — Linux binary
+          - **site/** — Static documentation site (GitHub Pages)
+
+          ## Checksums
+
+          SHA256 checksums are provided for all binaries.
+          EOF
+          )
+          echo "$RELEASE_NOTES" > dist/RELEASE_NOTES.md
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Athenas ${{ steps.version.outputs.version }}
+          body_path: dist/RELEASE_NOTES.md
+          files: |
+            dist/ath-linux-x86_64
+            dist/ath-linux-x86_64.sha256
+            dist/RELEASE_NOTES.md
+          draft: false
+          prerelease: false
