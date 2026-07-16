@@ -20,7 +20,13 @@
     "version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
     "authority": { "type": "string", "pattern": "^Level \\d .+" },
     "ratified_by": { "type": "string" },
+    "completion": { "type": "integer", "minimum": 0, "maximum": 100 },
+    "missing_sections": { "type": "array", "items": { "type": "string" } },
+    "review_status": { "type": "string" },
+    "frozen": { "type": "boolean" },
     "supersedes": { "type": "array", "items": { "type": "string" } },
+    "validated_by": { "type": "array", "items": { "type": "string" } },
+    "depends_on": { "type": "array", "items": { "type": "string" } },
     "related": { "type": "array", "items": { "type": "string" } }
   }
 }

@@ -3,17 +3,18 @@ id: CONST-0001
 title: The Athenas Constitution
 author: Chief Software Architect
 date: 2026-07-16
-status: Draft
-version: 0.2.0
+status: Approved
+version: 1.0.0
 authority: Level 0 — Constitution
-completion: 80
-missing_sections:
-  - Article III (detailed completion criteria)
-  - Article IV (exception process)
-review_status: Pending
+completion: 100
+missing_sections: []
+review_status: Approved
+frozen: true
 implements: []
 depends_on: []
-validated_by: []
+validated_by:
+  - VISION-0001
+  - DIRECTIVE-0001
 derived_from: []
 supersedes: []
 related:
@@ -139,6 +140,33 @@ related: []
 Draft → Review → Approved → (Superseded | Archived)
 ```
 
+### III.4 Completion Criteria
+
+A document is considered **complete** when it satisfies ALL of the following criteria for its authority level:
+
+| Criterion | Level 0–4 | Level 5–6 | Level 7–8 |
+|-----------|-----------|-----------|-----------|
+| All required front-matter fields present | ✅ Required | ✅ Required | ✅ Required |
+| All sections drafted (no placeholder content) | ✅ Required | ✅ Required | Recommended |
+| References to parent/child documents valid | ✅ Required | ✅ Required | Recommended |
+| Decision Log populated with at least one entry | ✅ Required | Recommended | Optional |
+| YAML front-matter passes schema validation | ✅ Required | ✅ Required | ✅ Required |
+| No broken `implements`/`depends_on` references | ✅ Required | ✅ Required | Optional |
+| Reviewed by at least one peer or agent | ✅ Required | Recommended | Optional |
+| Ratified by Architect (Level 0–1 only) | ✅ Required | N/A | N/A |
+
+**Completion percentage** is computed as: `(criteria_met / total_applicable_criteria) × 100`.
+
+A document with 100% completion and `status: Approved` is considered **frozen**. Frozen documents may only be changed through the Amendment Process (V.3).
+
+### III.5 Document Freezing
+
+Once a document reaches `status: Approved` with `completion: 100`, it is **frozen**. Frozen documents:
+- May not be modified without an ADR
+- Serve as the authoritative reference for all lower-level documents
+- Are marked with `frozen: true` in their front-matter
+- Generate a warning from the compiler if any lower-level document contradicts them
+
 ---
 
 ## Article IV — Engineering Process
@@ -179,6 +207,34 @@ Idea → Discussion → Engineering Review → Specification → ADR → Approve
 
 ### IV.3 No Shortcuts
 Skipping steps in the engineering process is a violation of this Constitution. Expediency does not excuse omission.
+
+### IV.4 Exception Process
+
+Exceptions to the engineering process (IV.3) are permitted **only** when ALL of the following conditions are met:
+
+1. **Explicit request** — A `QUESTION` or `EXCEPTION-REQUEST` must be raised as a GitHub Discussion or Issue
+2. **Justification** — The request must document why the standard process cannot be followed
+3. **Limited scope** — The exception applies to a single document, feature, or decision, not to a class of work
+4. **Time-bound** — The exception must include a deadline for compliance or re-evaluation
+5. **Architect approval** — The exception must be approved by the Chief Software Architect (or their delegate)
+6. **Documented** — The exception must be recorded as an ADR entry with:
+   - What was exempted
+   - Why
+   - What evidence supports the exception
+   - When it expires
+   - What conditions would make it permanent (if any)
+
+**Examples of valid exceptions:**
+- Creating an experimental benchmark without a full specification when the runtime doesn't exist yet
+- Writing a prototype implementation to gather evidence before committing to a specification
+- Fast-tracking a security fix through documentation stages
+
+**Examples of invalid exceptions:**
+- "We don't have time to write specs"
+- "This is too small to document"
+- "Only I will work on this"
+
+Exceptions expire automatically after 30 days unless renewed through the same process.
 
 ---
 
