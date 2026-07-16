@@ -23,7 +23,6 @@ jobs:
       - name: Run Knowledge Compiler
         run: |
           ./crates/athenas-compiler/target/release/athenas
-        continue-on-error: true
 
       - name: Check YAML files are valid
         run: |

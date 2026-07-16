@@ -2,6 +2,7 @@
 id: CONTEXT-REPO-0001
 title: Repository Context
 date: 2026-07-16
+status: Active
 purpose: "Repository status for agents"
 ---
 
@@ -12,7 +13,7 @@ purpose: "Repository status for agents"
 - **URL:** https://github.com/SCP-00/athenas
 - **Visibility:** Public
 - **Default Branch:** develop
-- **Production Branch:** main (not yet created)
+- **Production Branch:** main
 
 ## Branch Structure
 

@@ -2,6 +2,7 @@
 id: CONTEXT-RUNTIME-0001
 title: Runtime Context
 date: 2026-07-16
+status: Active
 purpose: "Runtime engine status for agents"
 ---
 
