@@ -21,8 +21,8 @@ An engineering platform for local AI. See `BOOTSTRAP.md` for the 5-minute introd
 
 See `knowledge/` for detailed documentation:
 - `knowledge/INDEX.md` — Complete document inventory with completion tracking
-- `knowledge/STATUS.md` — Current project status and blockers
-- `knowledge/QUICKLINKS.md` — All resource links
+- `knowledge/STATUS.md` — Current project status and blockers *(see `CURRENT_CONTEXT.md`)*
+- `knowledge/QUICKLINKS.md` — All resource links *(see `BOOTSTRAP.md`)*
 
 Key state files:
 - `.state/project.yaml` — Structured project state (machine-readable)
