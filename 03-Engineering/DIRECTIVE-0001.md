@@ -6,7 +6,18 @@ date: 2026-07-16
 status: Approved
 version: 1.0.0
 authority: Level 3 — Engineering
+completion: 100
+missing_sections: []
+review_status: Approved
+implements:
+  - CONST-0001: "Article IV — Engineering Process"
+depends_on:
+  - CONST-0001: "Constitution establishes authority levels"
+validated_by: []
+derived_from:
+  - ARCH-chatty: "Chatty's engineering directives"
 supersedes: []
+related: []
 ---
 
 # DIRECTIVE-0001 — How Athenas Must Be Developed
