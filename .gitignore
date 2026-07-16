@@ -32,9 +32,22 @@ yarn-error.log*
 .env.local
 .env.*.local
 
+# Rust build artifacts — entire target directory tree
+crates/athenas-compiler/target/
+**/target/
+
+# Compiler output — generated JSON, not source
+.knowledge/
+.knowledge/**
+**/.knowledge/
+
 # Build artifacts
 dist/
 build/
+site/dist/
+site/node_modules/
+
+# Models / binary blobs
 *.gguf
 *.bin
 *.pt
@@ -45,13 +58,9 @@ build/
 *.log
 logs/
 
-# Rust build artifacts
-crates/*/target/
-
-# Compiler output
-.knowledge/
+# Metrics / generated reports
+.metrics/
+.metrics/**
 
 # Project specific
 .git-commit-marker
-site/dist/
-site/node_modules/

@@ -24,10 +24,6 @@ pub fn load_schemas(schemas_dir: &Path) -> Result<SchemaMap> {
         ("INDEX", "index.schema.json"),
         ("CONTEXT", "context.schema.json"),
         ("BOOTSTRAP", "bootstrap.schema.json"),
-        ("DIRECTIVE", "directive.schema.json"),
-        ("INDEX", "index.schema.json"),
-        ("CONTEXT", "context.schema.json"),
-        ("BOOTSTRAP", "bootstrap.schema.json"),
     ];
 
     for (doc_type, filename) in &schema_files {
@@ -52,24 +48,18 @@ pub fn load_schemas(schemas_dir: &Path) -> Result<SchemaMap> {
 }
 
 /// Validate a document's front-matter against its type's schema
-pub fn validate_document(
-    doc: &Document,
-    schemas: &SchemaMap,
-) -> Vec<String> {
+pub fn validate_document(doc: &Document, schemas: &SchemaMap) -> Vec<String> {
     let doc_type = doc.id.split('-').next().unwrap_or("UNKNOWN");
     let mut errors = Vec::new();
 
     if let Some(schema) = schemas.get(doc_type) {
         // Convert YAML front-matter to JSON for validation
-        let json_value = serde_json::to_value(&doc.front_matter)
-            .unwrap_or(Value::Null);
+        let json_value = serde_json::to_value(&doc.front_matter).unwrap_or(Value::Null);
 
         for error in schema.iter_errors(&json_value) {
             errors.push(format!(
                 "{}: {} (at {})",
-                doc.id,
-                error,
-                error.instance_path
+                doc.id, error, error.instance_path
             ));
         }
     } else {
@@ -83,10 +73,7 @@ pub fn validate_document(
 }
 
 /// Validate all documents and return a list of all validation errors
-pub fn validate_all_documents(
-    documents: &[Document],
-    schemas: &SchemaMap,
-) -> Vec<String> {
+pub fn validate_all_documents(documents: &[Document], schemas: &SchemaMap) -> Vec<String> {
     let mut all_errors = Vec::new();
 
     for doc in documents {

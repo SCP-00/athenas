@@ -1,6 +1,6 @@
-mod parser;
-mod graph;
 mod generators;
+mod graph;
+mod parser;
 mod validator;
 
 use clap::Parser;
@@ -9,7 +9,11 @@ use std::path::PathBuf;
 
 /// Athenas Knowledge Compiler — compiles engineering documentation into structured knowledge artifacts
 #[derive(Parser, Debug)]
-#[command(name = "athenas", version = "0.1.0", about = "Engineering Compiler for Athenas")]
+#[command(
+    name = "athenas",
+    version = "0.1.0",
+    about = "Engineering Compiler for Athenas"
+)]
 struct Cli {
     /// Path to the project root (defaults to current directory)
     #[arg(default_value = ".")]
@@ -32,9 +36,18 @@ fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
 
     println!();
-    println!("{}", "╔══════════════════════════════════════════╗".bright_blue());
-    println!("{}", "║     Athenas Knowledge Compiler v0.1.0    ║".bright_blue());
-    println!("{}", "╚══════════════════════════════════════════╝".bright_blue());
+    println!(
+        "{}",
+        "╔══════════════════════════════════════════╗".bright_blue()
+    );
+    println!(
+        "{}",
+        "║     Athenas Knowledge Compiler v0.1.0    ║".bright_blue()
+    );
+    println!(
+        "{}",
+        "╚══════════════════════════════════════════╝".bright_blue()
+    );
     println!();
 
     let root = cli.project_root.canonicalize()?;
@@ -43,17 +56,26 @@ fn main() -> anyhow::Result<()> {
     // Phase 0: Load JSON schemas
     println!("{} Loading schemas...", "📋".bold());
     let schemas = validator::load_schemas(&schemas_dir)?;
-    println!("  Loaded {} document type schemas", schemas.len().to_string().bright_green());
+    println!(
+        "  Loaded {} document type schemas",
+        schemas.len().to_string().bright_green()
+    );
 
     // Phase 1: Find and parse documents
     println!("{} Scanning project: {}", "🔍".bold(), root.display());
 
     let documents = parser::parse_all_documents(&root)?;
 
-    println!("  Found {} markdown documents with valid front-matter", documents.len().to_string().bright_green());
+    println!(
+        "  Found {} markdown documents with valid front-matter",
+        documents.len().to_string().bright_green()
+    );
 
     if documents.is_empty() {
-        println!("  {}", "⚠ No documents found — check project_root path".yellow());
+        println!(
+            "  {}",
+            "⚠ No documents found — check project_root path".yellow()
+        );
         return Ok(());
     }
 
@@ -61,7 +83,9 @@ fn main() -> anyhow::Result<()> {
     if cli.verbose {
         for doc in &documents {
             let doc_type = doc.id.split('-').next().unwrap_or("?");
-            let status = doc.front_matter.get("status")
+            let status = doc
+                .front_matter
+                .get("status")
                 .and_then(|v| v.as_str())
                 .unwrap_or("?");
             println!(
@@ -80,7 +104,10 @@ fn main() -> anyhow::Result<()> {
     println!("{} Validating documents...", "✓".bold());
     let validation_errors = validator::validate_all_documents(&documents, &schemas);
     if validation_errors.is_empty() {
-        println!("  {} All documents pass schema validation", "✓".bright_green());
+        println!(
+            "  {} All documents pass schema validation",
+            "✓".bright_green()
+        );
     } else {
         for error in &validation_errors {
             println!("  {} {}", "✖".red(), error);
@@ -95,7 +122,13 @@ fn main() -> anyhow::Result<()> {
         "  Nodes: {} | Edges: {} | Types: {} | Diagnostics: {}",
         output.graph.metadata.total_nodes.to_string().bright_green(),
         output.graph.metadata.total_edges.to_string().bright_cyan(),
-        output.graph.metadata.doc_types.len().to_string().bright_yellow(),
+        output
+            .graph
+            .metadata
+            .doc_types
+            .len()
+            .to_string()
+            .bright_yellow(),
         output.diagnostics.len().to_string().bright_red()
     );
 
@@ -108,7 +141,13 @@ fn main() -> anyhow::Result<()> {
                 "warning" => "⚠".yellow(),
                 _ => "ℹ".dimmed(),
             };
-            println!("  {} [{}] {} — {}", level, diag.id, diag.message, diag.path.dimmed());
+            println!(
+                "  {} [{}] {} — {}",
+                level,
+                diag.id,
+                diag.message,
+                diag.path.dimmed()
+            );
         }
         println!();
     }
@@ -116,7 +155,10 @@ fn main() -> anyhow::Result<()> {
     // Show ontology status
     if output.ontology != serde_json::Value::Null {
         let terms = output.ontology.as_object().map(|o| o.len()).unwrap_or(0);
-        println!("  Ontology: {} terms defined", terms.to_string().bright_magenta());
+        println!(
+            "  Ontology: {} terms defined",
+            terms.to_string().bright_magenta()
+        );
     } else {
         println!("  {} No ontology.yaml found", "ℹ".dimmed());
     }
@@ -127,7 +169,10 @@ fn main() -> anyhow::Result<()> {
 
     println!();
     println!("{}", "✓ Compilation complete!".bright_green().bold());
-    println!("  Output: {}", cli.output.display().to_string().bright_white());
+    println!(
+        "  Output: {}",
+        cli.output.display().to_string().bright_white()
+    );
     println!();
 
     Ok(())

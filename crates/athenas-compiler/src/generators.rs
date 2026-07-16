@@ -4,7 +4,7 @@ use serde_yaml::Value as YamlValue;
 use std::collections::HashMap;
 use std::path::Path;
 
-use crate::graph::{build_knowledge_graph, KnowledgeGraph};
+use crate::graph::{KnowledgeGraph, build_knowledge_graph};
 use crate::parser::Document;
 
 /// Search index entry
@@ -147,10 +147,7 @@ pub fn generate_decisions(documents: &[Document]) -> Vec<DecisionEntry> {
                             .unwrap_or("");
 
                         // Skip header/separator rows
-                        if !date.is_empty()
-                            && !date.contains("Date")
-                            && !date.contains("---")
-                        {
+                        if !date.is_empty() && !date.contains("Date") && !date.contains("---") {
                             entries.push(DecisionEntry {
                                 date: date.to_string(),
                                 id: doc.id.clone(),
@@ -170,10 +167,7 @@ pub fn generate_decisions(documents: &[Document]) -> Vec<DecisionEntry> {
 }
 
 /// Generate cross-references between documents
-pub fn generate_references(
-    documents: &[Document],
-    graph: &KnowledgeGraph,
-) -> Vec<CrossReference> {
+pub fn generate_references(documents: &[Document], graph: &KnowledgeGraph) -> Vec<CrossReference> {
     let title_map: HashMap<String, String> = documents
         .iter()
         .map(|d| {
@@ -190,40 +184,32 @@ pub fn generate_references(
     graph
         .edges
         .iter()
-        .map(|edge| {
-            CrossReference {
-                source_id: edge.source.clone(),
-                source_title: title_map
-                    .get(&edge.source)
-                    .cloned()
-                    .unwrap_or_default(),
-                target_id: edge.target.clone(),
-                target_title: title_map
-                    .get(&edge.target)
-                    .cloned()
-                    .unwrap_or_default(),
-                relationship: edge.relationship.clone(),
-            }
+        .map(|edge| CrossReference {
+            source_id: edge.source.clone(),
+            source_title: title_map.get(&edge.source).cloned().unwrap_or_default(),
+            target_id: edge.target.clone(),
+            target_title: title_map.get(&edge.target).cloned().unwrap_or_default(),
+            relationship: edge.relationship.clone(),
         })
         .collect()
 }
 
 /// Generate diagnostics: missing references, validation errors, etc.
-pub fn generate_diagnostics(
-    documents: &[Document],
-    graph: &KnowledgeGraph,
-) -> Vec<Diagnostic> {
+pub fn generate_diagnostics(documents: &[Document], graph: &KnowledgeGraph) -> Vec<Diagnostic> {
     let mut diagnostics = Vec::new();
 
-    let known_ids: HashMap<String, &Document> = documents
-        .iter()
-        .map(|d| (d.id.clone(), d))
-        .collect();
+    let known_ids: HashMap<String, &Document> =
+        documents.iter().map(|d| (d.id.clone(), d)).collect();
 
     // Check all documents have required fields
     for doc in documents {
         // Check for missing date
-        if doc.front_matter.get("date").and_then(|v| v.as_str()).is_none() {
+        if doc
+            .front_matter
+            .get("date")
+            .and_then(|v| v.as_str())
+            .is_none()
+        {
             diagnostics.push(Diagnostic {
                 severity: "warning".to_string(),
                 id: doc.id.clone(),
@@ -233,7 +219,12 @@ pub fn generate_diagnostics(
         }
 
         // Check for missing title
-        if doc.front_matter.get("title").and_then(|v| v.as_str()).is_none() {
+        if doc
+            .front_matter
+            .get("title")
+            .and_then(|v| v.as_str())
+            .is_none()
+        {
             diagnostics.push(Diagnostic {
                 severity: "warning".to_string(),
                 id: doc.id.clone(),
@@ -243,7 +234,12 @@ pub fn generate_diagnostics(
         }
 
         // Check for missing status
-        if doc.front_matter.get("status").and_then(|v| v.as_str()).is_none() {
+        if doc
+            .front_matter
+            .get("status")
+            .and_then(|v| v.as_str())
+            .is_none()
+        {
             diagnostics.push(Diagnostic {
                 severity: "warning".to_string(),
                 id: doc.id.clone(),
@@ -282,8 +278,8 @@ pub fn load_ontology(project_root: &Path) -> Result<serde_json::Value> {
     let yaml_value: YamlValue = serde_yaml::from_str(&content)
         .with_context(|| format!("Failed to parse ontology YAML: {}", ontology_path.display()))?;
 
-    let json_value = serde_json::to_value(&yaml_value)
-        .context("Failed to convert ontology to JSON")?;
+    let json_value =
+        serde_json::to_value(&yaml_value).context("Failed to convert ontology to JSON")?;
 
     Ok(json_value)
 }

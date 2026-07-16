@@ -26,21 +26,18 @@ pub struct Document {
 pub fn find_markdown_files(root: &Path) -> Vec<String> {
     let mut files = Vec::new();
 
-    for entry in WalkDir::new(root)
-        .into_iter()
-        .filter_entry(|e| {
-            let path = e.path();
-            // Skip hidden directories, node_modules, .git, templates
-            if path.is_dir() {
-                let name = path.file_name().unwrap_or_default().to_string_lossy();
-                return !name.starts_with('.')
-                    && name != "node_modules"
-                    && name != "templates"
-                    && name != "target";
-            }
-            true
-        })
-    {
+    for entry in WalkDir::new(root).into_iter().filter_entry(|e| {
+        let path = e.path();
+        // Skip hidden directories, node_modules, .git, templates
+        if path.is_dir() {
+            let name = path.file_name().unwrap_or_default().to_string_lossy();
+            return !name.starts_with('.')
+                && name != "node_modules"
+                && name != "templates"
+                && name != "target";
+        }
+        true
+    }) {
         let entry = entry.unwrap();
         let path = entry.path();
 
@@ -140,6 +137,9 @@ mod tests {
     #[test]
     fn test_find_markdown_files() {
         let files = find_markdown_files(Path::new("."));
-        assert!(!files.is_empty(), "Should find at least some markdown files");
+        assert!(
+            !files.is_empty(),
+            "Should find at least some markdown files"
+        );
     }
 }
