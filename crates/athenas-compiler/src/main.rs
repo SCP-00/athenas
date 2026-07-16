@@ -87,6 +87,36 @@ enum Commands {
         verbose: bool,
     },
 
+    /// Detect hardware, discover models, list capabilities
+    Doctor {
+        /// Output structured JSON instead of human-readable format
+        #[arg(short, long)]
+        json: bool,
+    },
+
+    /// Benchmark a model against a capability and generate certification report
+    Certify {
+        /// Path to the GGUF model file (auto-detect if omitted)
+        #[arg(short, long)]
+        model: Option<PathBuf>,
+
+        /// Capability to benchmark (default: text-generation)
+        #[arg(short, long, default_value = "text-generation")]
+        capability: String,
+
+        /// Maximum tokens to generate
+        #[arg(short = 'n', long, default_value = "100")]
+        max_tokens: usize,
+
+        /// Path to llama-server binary
+        #[arg(long)]
+        server_path: Option<PathBuf>,
+
+        /// Output structured JSON instead of human-readable format
+        #[arg(short, long)]
+        json: bool,
+    },
+
     /// Full pipeline: validate + graph + all artifacts (project.yaml, index, search, crossrefs)
     Build {
         /// Path to the project root (defaults to current directory)
@@ -314,6 +344,175 @@ fn run_build(root: &Path, output_dir: &Path, schemas_dir: &Path, _verbose: bool)
     Ok(0)
 }
 
+fn run_doctor(json_output: bool) -> anyhow::Result<i32> {
+    use runtime::hardware;
+    use runtime::Capability;
+
+    println!("╔══════════════════════════════════════════╗");
+    println!("║        Athenas System Doctor             ║");
+    println!("╚══════════════════════════════════════════╝");
+    println!();
+
+    // Hardware detection
+    println!("{} Detecting hardware...", "🔍".bold());
+    let hw = hardware::detect_hardware();
+
+    // Model discovery
+    println!("{} Discovering models...", "📦".bold());
+    let models = runtime::find_all_models();
+
+    if json_output {
+        let output = serde_json::json!({
+            "hardware": hw,
+            "models": models,
+            "capabilities": Capability::all().iter().map(|c| c.name()).collect::<Vec<_>>(),
+            "platform": std::env::consts::ARCH,
+        });
+        println!("{}", serde_json::to_string_pretty(&output)?);
+    } else {
+        // CPU
+        println!("  🖥  CPU: {} ({} cores, {} threads)", hw.cpu.model, hw.cpu.cores, hw.cpu.threads);
+
+        // GPU
+        for gpu in &hw.gpu {
+            println!("  🎮 GPU: {} ({} GB VRAM, driver {})", gpu.model, gpu.vram_gb, gpu.driver_version);
+        }
+
+        // Memory
+        println!("  💾 RAM: {:.0} GB total ({:.0} GB available)", hw.memory.total_gb, hw.memory.available_gb);
+
+        // OS
+        println!("  💻 OS: {} {} ({})", hw.os.name, hw.os.version, hw.os.arch);
+        println!("  🐧 Kernel: {}", hw.kernel);
+        println!();
+
+        // Models
+        println!("📦 Models discovered:");
+        if models.is_empty() {
+            println!("  No GGUF models found.");
+        } else {
+            for m in &models {
+                println!("  {} ({:.0}B, {})", m.id, m.parameters_b, m.quantization);
+                println!("     Path: {}", m.path);
+            }
+        }
+        println!();
+
+        // Capabilities
+        println!("🎯 Available capabilities:");
+        for c in Capability::all() {
+            println!("  - {}", c.name());
+        }
+        println!();
+    }
+
+    Ok(0)
+}
+
+fn run_certify(
+    model_path: Option<&Path>,
+    capability_name: &str,
+    max_tokens: usize,
+    server_path: Option<&Path>,
+    json_output: bool,
+) -> anyhow::Result<i32> {
+    use runtime::hardware;
+    use runtime::Capability;
+
+    // Resolve capability
+    let capability = Capability::from_name(capability_name)
+        .ok_or_else(|| anyhow::anyhow!(
+            "Unknown capability: '{capability_name}'. Available: {:?}",
+            Capability::all().iter().map(|c| c.name()).collect::<Vec<_>>()
+        ))?;
+
+    // Resolve model
+    let model = runtime::find_model(model_path)?;
+    let hw = hardware::detect_hardware();
+    let info = runtime::infer_model_info(&model, Some(&hw));
+
+    let prompt = match capability {
+        Capability::TextGeneration => "Write a concise summary of what an AI engineering platform is in 3 sentences.",
+        Capability::Coding => "Write a Python function that implements a binary search tree with insert and search methods.",
+        Capability::ToolCalling => "Given the functions: get_weather(city: str) and send_email(to: str, body: str), respond with a JSON function call to check the weather in Tokyo.",
+        Capability::Translation => "Translate this to Spanish: 'The quick brown fox jumps over the lazy dog.'",
+        Capability::Reasoning => "If a bat and a ball cost $1.10 in total, and the bat costs $1.00 more than the ball, how much does the ball cost? Explain step by step.",
+        Capability::InstructionFollowing => "Reply ONLY with the word 'compliant'. Do not add any other text.",
+        Capability::RAG => "Based on the context: 'Athenas is an engineering platform for local AI. It compiles knowledge into structured artifacts.' Answer: What does Athenas compile?",
+        Capability::LongContext => "Repeat the following sentence: The certification process validates model capabilities and generates structured evidence for engineering decisions. The certification process validates model capabilities and generates structured evidence for engineering decisions."
+    };
+
+    if !json_output {
+        println!("╔══════════════════════════════════════════╗");
+        println!("║     Athenas Certification v0.1.0         ║");
+        println!("╚══════════════════════════════════════════╝");
+        println!();
+        println!("🎯 Capability: {}", capability.name());
+        println!("📋 Model: {}", info.path);
+        println!("📏 Parameters: {:.0}B | Quant: {}", info.parameters_b, info.quantization);
+        println!();
+    }
+
+    // Build and start runtime
+    let mut rt_builder = runtime::LlamaServerRuntime::new();
+    if let Some(sp) = server_path {
+        rt_builder = rt_builder.with_server_path(sp.to_path_buf());
+    }
+    let mut rt = rt_builder;
+
+    let load_start = Instant::now();
+    rt.load_model(&model)?;
+    let load_time = load_start.elapsed();
+
+    if !json_output {
+        println!("⏱  Loaded in {:.1}s", load_time.as_secs_f64());
+        println!("⚡ Benchmarking...");
+        println!();
+    }
+
+    // Run inference
+    let params = InferenceParams {
+        max_tokens,
+        ..Default::default()
+    };
+
+    let result = rt.complete(prompt, &params)?;
+    rt.unload()?;
+
+    let execution = runtime::ExecutionResult {
+        inference: result,
+        hardware: hw,
+        capability,
+        model_path: model.to_string_lossy().to_string(),
+        model_info: info,
+        warnings: Vec::new(),
+        evidence_ref: None,
+    };
+
+    if json_output {
+        println!("{}", serde_json::to_string_pretty(&execution)?);
+    } else {
+        println!("📊 Certification Results:");
+        println!("  🎯 Capability:  {}", execution.capability.name());
+        println!("  ⏱  TTFT:       {:.1} ms", execution.inference.ttft_ms);
+        println!("  🚀 Throughput:  {:.1} tok/s", execution.inference.tokens_per_second);
+        println!("  📊 Generated:   {} tokens", execution.inference.total_tokens);
+        println!("  💾 Hardware:    {} | {} GB RAM", execution.hardware.cpu.model, execution.hardware.memory.total_gb);
+        if let Some(gpu) = execution.hardware.gpu.first() {
+            println!("  🎮 GPU:         {}", gpu.model);
+        }
+        println!();
+        println!("📝 Response:");
+        println!("{}", "─".repeat(60));
+        println!("{}", execution.inference.text);
+        println!("{}", "─".repeat(60));
+        println!();
+        println!("{} Certification complete!", "✓".bright_green());
+    }
+
+    Ok(0)
+}
+
 fn run_inference(
     model_path: Option<&Path>,
     prompt: Option<&str>,
@@ -326,7 +525,7 @@ fn run_inference(
 
     // Resolve model
     let model = runtime::find_model(model_path)?;
-    let info = runtime::infer_model_info(&model);
+    let info = runtime::infer_model_info(&model, None);
 
     // Read prompt
     let prompt_text = match prompt {
@@ -462,6 +661,28 @@ fn main() -> anyhow::Result<()> {
         Some(Commands::Graph { project_root, output, verbose }) => {
             let root = project_root.canonicalize()?;
             let exit_code = run_graph(&root, output, *verbose)?;
+            std::process::exit(exit_code);
+        }
+
+        Some(Commands::Doctor { json }) => {
+            let exit_code = run_doctor(*json)?;
+            std::process::exit(exit_code);
+        }
+
+        Some(Commands::Certify {
+            model,
+            capability,
+            max_tokens,
+            server_path,
+            json,
+        }) => {
+            let exit_code = run_certify(
+                model.as_deref(),
+                capability,
+                *max_tokens,
+                server_path.as_deref(),
+                *json,
+            )?;
             std::process::exit(exit_code);
         }
 

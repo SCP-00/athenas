@@ -1,3 +1,5 @@
+pub mod hardware;
+
 use std::io::{Read, Write};
 use std::net::TcpStream;
 use std::path::{Path, PathBuf};
@@ -33,8 +35,65 @@ pub struct InferenceResult {
     pub total_duration_ms: f64,
 }
 
-/// A model descriptor used for documentation
+/// Rich execution result with full metadata (replaces InferenceResult over time)
 #[derive(Debug, Clone, serde::Serialize)]
+pub struct ExecutionResult {
+    pub inference: InferenceResult,
+    pub hardware: hardware::HardwareInfo,
+    pub capability: Capability,
+    pub model_path: String,
+    pub model_info: ModelInfo,
+    pub warnings: Vec<String>,
+    pub evidence_ref: Option<String>,
+}
+
+/// Measurable capability that a model can be benchmarked against
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub enum Capability {
+    TextGeneration,
+    Coding,
+    ToolCalling,
+    Translation,
+    Reasoning,
+    RAG,
+    LongContext,
+    InstructionFollowing,
+}
+
+impl Capability {
+    pub fn all() -> &'static [Capability] {
+        &[
+            Capability::TextGeneration,
+            Capability::Coding,
+            Capability::ToolCalling,
+            Capability::Translation,
+            Capability::Reasoning,
+            Capability::RAG,
+            Capability::LongContext,
+            Capability::InstructionFollowing,
+        ]
+    }
+
+    pub fn name(&self) -> &'static str {
+        match self {
+            Capability::TextGeneration => "text-generation",
+            Capability::Coding => "coding",
+            Capability::ToolCalling => "tool-calling",
+            Capability::Translation => "translation",
+            Capability::Reasoning => "reasoning",
+            Capability::RAG => "rag",
+            Capability::LongContext => "long-context",
+            Capability::InstructionFollowing => "instruction-following",
+        }
+    }
+
+    pub fn from_name(s: &str) -> Option<Capability> {
+        Capability::all().iter().find(|c| c.name() == s).copied()
+    }
+}
+
+/// A model descriptor used for documentation
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct ModelInfo {
     pub id: String,
     pub path: String,
@@ -42,6 +101,7 @@ pub struct ModelInfo {
     pub quantization: String,
     pub architecture: String,
     pub context_length: usize,
+    pub hardware: hardware::HardwareInfo,
 }
 
 /// Runtime abstraction — implemented per backend
@@ -399,8 +459,64 @@ pub fn find_model(override_path: Option<&Path>) -> anyhow::Result<PathBuf> {
     )
 }
 
+/// Find ALL GGUF models in common directories (recursive, for doctor/certify)
+pub fn find_all_models() -> Vec<ModelInfo> {
+    let hw = hardware::detect_hardware();
+    let home = std::env::var("HOME").unwrap_or_default();
+    let mut candidates = vec![
+        "models".to_string(),
+        "../models".to_string(),
+        "/models".to_string(),
+        "/usr/share/models".to_string(),
+    ];
+    if !home.is_empty() {
+        candidates.push(format!("{home}/models"));
+        candidates.push(format!("{home}/Models"));
+    }
+
+    let mut seen = std::collections::HashSet::new();
+    let mut models = Vec::new();
+    for dir in &candidates {
+        let d = Path::new(dir);
+        if !d.is_dir() {
+            continue;
+        }
+        // Walk recursively to find all .gguf files
+        let walker = walkdir::WalkDir::new(d)
+            .max_depth(5)
+            .into_iter()
+            .filter_entry(|e| {
+                let name = e.file_name().to_string_lossy();
+                !name.starts_with('.') && name != "target"
+            });
+        for entry in walker.flatten() {
+            let path = entry.path();
+            if !path.is_file() {
+                continue;
+            }
+            if path.extension().map(|e| e == "gguf").unwrap_or(false) {
+                // Canonicalize to deduplicate (e.g., ../models/foo == /home/user/models/foo)
+                let canonical = path.canonicalize().ok();
+                let key = canonical.as_deref().unwrap_or(path);
+                if !seen.insert(key.to_string_lossy().to_string()) {
+                    continue; // Already added
+                }
+                // Skip vision projection files (mmproj) — they're not standalone LLMs
+                let fname = path.file_stem().unwrap_or_default().to_string_lossy();
+                if fname.contains("mmproj") || fname.contains("MMPROJ") {
+                    continue;
+                }
+                models.push(infer_model_info(path, Some(&hw)));
+            }
+        }
+    }
+    // Sort by parameter count (largest first)
+    models.sort_by(|a, b| b.parameters_b.partial_cmp(&a.parameters_b).unwrap_or(std::cmp::Ordering::Equal));
+    models
+}
+
 /// Infer basic metadata from a model filename
-pub fn infer_model_info(path: &Path) -> ModelInfo {
+pub fn infer_model_info(path: &Path, hw: Option<&hardware::HardwareInfo>) -> ModelInfo {
     let fname = path.file_stem().unwrap_or_default().to_string_lossy();
     let full = path.to_string_lossy();
 
@@ -457,5 +573,6 @@ pub fn infer_model_info(path: &Path) -> ModelInfo {
         quantization: quant.to_string(),
         architecture: "Transformer".to_string(),
         context_length: 32768,
+        hardware: hw.cloned().unwrap_or_else(hardware::detect_hardware),
     }
 }
