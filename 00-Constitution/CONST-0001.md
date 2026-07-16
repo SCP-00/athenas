@@ -242,5 +242,5 @@ This document is versioned. It will evolve as Athenas evolves. Each version shal
 
 | Date | Decision | Rationale | Alternatives | Evidence |
 |------|----------|-----------|--------------|----------|
-| 2026-07-16 | Ratify CONST-0001 | Establish foundational principles before any implementation | Informal development | DIRECTIVE-0001 |
+| 2026-07-16 | Initial draft of CONST-0001 completed | Establish foundational principles before any implementation | Informal development | DIRECTIVE-0001 |
 | 2026-07-16 | Adopt 8-article structure | Covers principles, authority, documents, process, governance, graph, validation, final | Alternative: single flat list | Engineering best practices |

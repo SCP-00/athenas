@@ -5,7 +5,7 @@ phase: Genesis
 version: 0.1.0
 
 current_document: CONST-0001
-current_branch: docs/constitution
+current_branch: develop
 
 active_milestone: M0
 active_epic: Engineering Foundation
@@ -71,4 +71,4 @@ document_counts:
   profiles: 0
   experiments: 0
   evidence: 0
-  templates: 0
+  templates: 8
