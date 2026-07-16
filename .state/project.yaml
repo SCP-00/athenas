@@ -1,0 +1,74 @@
+# Athenas Project State
+# Agents and developers READ THIS FIRST to understand current status.
+
+phase: Genesis
+version: 0.1.0
+
+current_document: CONST-0001
+current_branch: docs/constitution
+
+active_milestone: M0
+active_epic: Engineering Foundation
+
+blocked: false
+blocker: null
+
+next_task: Approve CONST-0001 (Review → Approved)
+last_completed: Knowledge Index
+last_validation: none
+last_benchmark: none
+last_architecture_decision: 2026-07-16
+
+active_sprint:
+  number: 0
+  goal: Establish engineering foundations
+  start: 2026-07-16
+  end: TBD
+
+milestones:
+  M0:
+    name: Genesis
+    description: Constitution, Bootstrap, Knowledge System
+    status: active
+  M1:
+    name: Runtime Core
+    description: Registry, Profiles, Providers
+    status: planned
+  M2:
+    name: Benchmark Engine
+    description: Automated benchmarking pipeline
+    status: planned
+  M3:
+    name: Certification
+    description: Model certification pipeline
+    status: planned
+  M4:
+    name: Dashboard
+    description: Web dashboard for monitoring
+    status: planned
+  M5:
+    name: Agent Platform
+    description: Agent orchestration engine
+    status: planned
+  M6:
+    name: Plugin Ecosystem
+    description: Third-party plugin system
+    status: planned
+  M7:
+    name: Public Release
+    description: Stable public launch
+    status: planned
+
+document_counts:
+  constitution: 1
+  vision: 0
+  requirements: 0
+  specifications: 0
+  architecture: 0
+  adr: 0
+  benchmarks: 0
+  models: 0
+  profiles: 0
+  experiments: 0
+  evidence: 0
+  templates: 0

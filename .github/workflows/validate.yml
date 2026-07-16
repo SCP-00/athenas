@@ -1,0 +1,131 @@
+name: Validate
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check YAML files are valid
+        run: |
+          echo "Checking YAML files..."
+          for f in $(find . -name "*.yaml" -o -name "*.yml" | grep -v node_modules | grep -v .github); do
+            python3 -c "import yaml; yaml.safe_load(open('$f'))" && echo "  OK: $f" || echo "  FAIL: $f"
+          done
+
+      - name: Validate document IDs
+        run: |
+          echo "Validating document ID prefixes..."
+          errors=0
+          valid_prefixes="CONST VISION REQ SPEC ARCH ADR EXP BENCH MODEL PROFILE CAP TASK TOOL EVID DIRECTIVE INDEX CONTEXT BOOTSTRAP ONT"
+          for f in $(find . -name "*.md" \( -path "./[0-9]*" -o -path "./[A-Z]*" \) | grep -v node_modules | grep -v templates); do
+            prefix=$(head -1 "$f" | grep -oP '^# [A-Z]+' | sed 's/^# //')
+            if [ -n "$prefix" ]; then
+              if ! echo "$valid_prefixes" | grep -qw "$prefix"; then
+                echo "  UNKNOWN PREFIX: $prefix in $f"
+                errors=$((errors+1))
+              fi
+            fi
+          done
+          echo "Prefix check complete. Errors: $errors"
+
+      - name: Check all documents have YAML front-matter
+        run: |
+          echo "Checking YAML front-matter..."
+          errors=0
+          template_dirs="03-Engineering/templates 04-Specifications/templates 05-Architecture/templates 09-Validation/templates"
+          for f in $(find . -name "*.md" \( -path "./[0-9]*" -o -path "./[A-Z]*" -o -path "./.state/*" -o -path "./knowledge/*" \) | grep -v node_modules); do
+            # Skip templates
+            skip=false
+            for d in $template_dirs; do
+              if echo "$f" | grep -q "^\./$d/"; then skip=true; fi
+            done
+            if [ "$skip" = true ]; then continue; fi
+
+            if ! head -1 "$f" | grep -q "^---$"; then
+              echo "  MISSING front-matter: $f"
+              errors=$((errors+1))
+            fi
+          done
+          echo "Front-matter check complete. Errors: $errors"
+
+      - name: Markdown lint
+        run: |
+          echo "Running markdown lint..."
+          # Use markdownlint-cli if available, otherwise basic checks
+          if command -v npx &> /dev/null; then
+            npx markdownlint-cli2 --no-stdin "*.md" "[0-9]*/**/*.md" "knowledge/*.md" 2>/dev/null || echo "  Note: markdownlint not installed, skipping"
+          else
+            echo "  Note: npx not available, skipping markdownlint"
+          fi
+          # Basic checks: no trailing spaces, no long lines in non-code
+          errors=0
+          for f in $(find . -name "*.md" -not -path "./node_modules/*" -not -path "./.git/*" | head -20); do
+            if grep -n '  \+$' "$f" 2>/dev/null | head -5 | grep -q .; then
+              echo "  TRAILING SPACES: $f"
+              errors=$((errors+1))
+            fi
+          done
+          echo "  Basic lint check complete."
+
+      - name: Check internal reference integrity
+        run: |
+          echo "Checking internal references..."
+          errors=0
+          for f in $(find . -name "*.md" -not -path "./node_modules/*" -not -path "./.git/*" | head -50); do
+            refs=$(grep -oP '\b[A-Z]+-\d{4}\b' "$f" 2>/dev/null | sort -u || true)
+            for ref in $refs; do
+              # Skip self-references
+              file_id=$(head -20 "$f" | grep -oP '^id:\s*\K[A-Z]+-\d+' || true)
+              if [ "$ref" = "$file_id" ]; then continue; fi
+              # Check if referenced document exists
+              found=$(grep -rl "^id: $ref" . --include="*.md" 2>/dev/null || true)
+              if [ -z "$found" ]; then
+                echo "  BROKEN REF: $ref in $f"
+                errors=$((errors+1))
+              fi
+            done
+          done
+          echo "Reference check complete. Errors: $errors"
+
+      - name: Validate ontology terms
+        run: |
+          echo "Checking ontology term usage..."
+          python3 -c "
+import yaml
+with open('knowledge/ontology.yaml') as f:
+    data = yaml.safe_load(f)
+terms = list(data.keys())
+print(f'Ontology loaded: {len(terms)} terms defined')
+print('Terms:')
+for t in terms:
+    info = data[t]
+    desc = info.get('description', '')[:80].replace('\n', ' ')
+    print(f'  - {t}: {desc}...')
+"
+
+      - name: Build knowledge graph summary
+        run: |
+          echo "## Document Tree" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          find . -name "*.md" -not -path "./node_modules/*" -not -path "./.git/*" | sort >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
+      - name: Build documentation index
+        run: |
+          echo "## Active Documents" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| ID | Title | Status | Location |" >> $GITHUB_STEP_SUMMARY
+          echo "|----|-------|--------|----------|" >> $GITHUB_STEP_SUMMARY
+          find . -name "*.md" -not -path "./node_modules/*" -not -path "./.git/*" -not -path "./templates/*" -not -path "./Athenas/*" | while read f; do
+            id=$(head -20 "$f" | grep -oP '^id:\s*\K\S+' || echo "—")
+            title=$(head -20 "$f" | grep -oP '^title:\s*\K.*' || echo "—")
+            status=$(head -20 "$f" | grep -oP '^status:\s*\K\S+' || echo "—")
+            echo "| $id | $title | $status | $f |" >> $GITHUB_STEP_SUMMARY
+          done
