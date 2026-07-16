@@ -22,12 +22,12 @@
     },
     {
       "id": "ADR-NNNN",
-      "title": "Untitled",
+      "title": "Architecture Decision Record Template",
       "doc_type": "ADR",
       "status": "Draft",
       "authority_level": 4,
       "path": "12-ADR/ADR-template.md",
-      "hash": "61e489836bb2a8f86195a15b07f6d93dc3a0e37b41990501c68dc7293d6b33b3",
+      "hash": "a6c72842e12b25e9c2151293318235feb6776164bcd6b16079a68973fad7ba4c",
       "tags": []
     },
     {
@@ -106,18 +106,18 @@
     "total_nodes": 10,
     "total_edges": 0,
     "doc_types": {
-      "BOOTSTRAP": 1,
-      "CONTEXT": 5,
       "CONST": 1,
+      "BOOTSTRAP": 1,
       "INDEX": 1,
-      "ADR": 1,
-      "DIRECTIVE": 1
+      "CONTEXT": 5,
+      "DIRECTIVE": 1,
+      "ADR": 1
     },
     "status_counts": {
       "Draft": 2,
-      "Active": 7,
-      "Approved": 1
+      "Approved": 1,
+      "Active": 7
     },
-    "generated_at": "2026-07-16T14:28:56Z"
+    "generated_at": "2026-07-16T14:29:19Z"
   }
 }

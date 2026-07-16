@@ -56,7 +56,7 @@
   {
     "date": "YYYY-MM-DD",
     "id": "ADR-NNNN",
-    "title": "Untitled",
+    "title": "Architecture Decision Record Template",
     "event": "ADR-NNNN created/updated"
   }
 ]

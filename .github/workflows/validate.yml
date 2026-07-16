@@ -21,24 +21,23 @@ jobs:
         run: cargo build --manifest-path crates/athenas-compiler/Cargo.toml --release
 
       - name: Run Knowledge Compiler
-        run: |
-          ./crates/athenas-compiler/target/release/athenas
+        run: ./crates/athenas-compiler/target/release/athenas
 
-      - name: Check YAML files are valid
+      - name: Validate YAML files
         run: |
           python3 << 'PYEOF'
 import yaml, os
 errors = 0
 for root, dirs, files in os.walk('.'):
     for f in files:
-        if f.endswith(('.yaml', '.yml')) and 'node_modules' not in root and '.git' not in root:
+        if f.endswith(('.yaml', '.yml')) and all(x not in root for x in ['node_modules', '.git', 'target']):
             try:
                 with open(os.path.join(root, f)) as fh:
                     yaml.safe_load(fh)
             except Exception as e:
                 print(f'FAIL: {os.path.join(root, f)}: {e}')
                 errors += 1
-print(f'Errors: {errors}')
+print(f'YAML errors: {errors}')
 PYEOF
 
       - name: Validate document IDs
@@ -49,59 +48,50 @@ valid = set('CONST VISION REQ SPEC ARCH ADR EXP BENCH MODEL PROFILE CAP TASK TOO
 errors = 0
 for root, dirs, files in os.walk('.'):
     for f in files:
-        if f.endswith('.md') and 'templates' not in root and 'node_modules' not in root and '.git' not in root and 'site' not in root:
+        if f.endswith('.md') and all(x not in root for x in ['templates', 'node_modules', '.git', 'site']):
             path = os.path.join(root, f)
             with open(path) as fh:
                 first_line = fh.readline().strip()
                 if first_line.startswith('# '):
                     prefix = first_line[2:].split()[0].split('-')[0]
                     if prefix not in valid:
-                        print(f'UNKNOWN PREFIX: {prefix} in {path}')
+                        print(f'UNKNOWN: {prefix} in {path}')
                         errors += 1
-print(f'Errors: {errors}')
+print(f'ID errors: {errors}')
 PYEOF
 
-      - name: Check YAML front-matter
+      - name: Validate front-matter and references
         run: |
           python3 << 'PYEOF'
-import os
-errors = 0
+import os, re
+ids = {}
+frontmatter_errors = 0
+ref_errors = 0
 for root, dirs, files in os.walk('.'):
     for f in files:
-        if f.endswith('.md') and 'templates' not in root and 'node_modules' not in root and '.git' not in root and 'site' not in root:
+        if f.endswith('.md') and all(x not in root for x in ['templates', 'node_modules', '.git', 'site']):
             path = os.path.join(root, f)
             with open(path) as fh:
                 content = fh.read().strip()
                 if not content.startswith('---'):
                     print(f'MISSING front-matter: {path}')
-                    errors += 1
-print(f'Errors: {errors}')
-PYEOF
-
-      - name: Check reference integrity
-        run: |
-          python3 << 'PYEOF'
-import os, re
-ids = set()
+                    frontmatter_errors += 1
+            m = re.search(r'^id:\s*(\S+)', content, re.MULTILINE)
+            if m:
+                ids[m.group(1)] = path
+# Check references
 for root, dirs, files in os.walk('.'):
     for f in files:
-        if f.endswith('.md') and 'node_modules' not in root and '.git' not in root:
-            with open(os.path.join(root, f)) as fh:
-                m = re.search(r'^id:\s*(\S+)', fh.read(), re.MULTILINE)
-                if m:
-                    ids.add(m.group(1))
-errors = 0
-for root, dirs, files in os.walk('.'):
-    for f in files:
-        if f.endswith('.md') and 'node_modules' not in root and '.git' not in root:
+        if f.endswith('.md') and all(x not in root for x in ['node_modules', '.git']):
             path = os.path.join(root, f)
             with open(path) as fh:
                 refs = set(re.findall(r'\b[A-Z]+-\d{4}\b', fh.read()))
             for ref in refs:
                 if ref not in ids:
                     print(f'BROKEN REF: {ref} in {path}')
-                    errors += 1
-print(f'Errors: {errors}')
+                    ref_errors += 1
+print(f'Front-matter errors: {frontmatter_errors}')
+print(f'Reference errors: {ref_errors}')
 PYEOF
 
       - name: Validate ontology
@@ -110,8 +100,9 @@ PYEOF
 import yaml
 with open('knowledge/ontology.yaml') as f:
     data = yaml.safe_load(f)
-print(f'Ontology loaded: {len(data)} terms')
-for t in data:
+terms = list(data.keys())
+print(f'Terms: {len(terms)}')
+for t in terms:
     print(f'  - {t}')
 PYEOF
 
@@ -154,14 +145,16 @@ PYEOF
       - name: Build Compiler
         run: cargo build --manifest-path crates/athenas-compiler/Cargo.toml --release
 
-      - name: Run Compiler
+      - name: Run Compiler (generate .knowledge/)
         run: ./crates/athenas-compiler/target/release/athenas
 
+      - name: Install site dependencies
+        run: npm ci
+        working-directory: site
+
       - name: Build Astro Site
-        run: |
-          cd site
-          npm install
-          npm run build
+        run: npm run build
+        working-directory: site
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
@@ -174,12 +167,3 @@ PYEOF
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
-
-  verify-deploy:
-    if: github.ref == 'refs/heads/main'
-    needs: deploy
-    runs-on: ubuntu-latest
-    steps:
-      - name: Verify deployment
-        run: |
-          echo "Site deployed to: https://SCP-00.github.io/athenas"

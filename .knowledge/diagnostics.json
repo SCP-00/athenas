@@ -1,8 +1,1 @@
-[
-  {
-    "severity": "warning",
-    "id": "ADR-NNNN",
-    "message": "Missing optional 'title' field in front-matter",
-    "path": "12-ADR/ADR-template.md"
-  }
-]
+[]

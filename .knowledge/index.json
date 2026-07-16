@@ -17,7 +17,7 @@
   },
   {
     "id": "ADR-NNNN",
-    "title": "Untitled",
+    "title": "Architecture Decision Record Template",
     "doc_type": "ADR",
     "status": "Draft",
     "path": "12-ADR/ADR-template.md",

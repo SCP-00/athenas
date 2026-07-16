@@ -53,3 +53,5 @@ crates/*/target/
 
 # Project specific
 .git-commit-marker
+site/dist/
+site/node_modules/

@@ -23,7 +23,7 @@
   {
     "date": "YYYY-MM-DD",
     "id": "ADR-NNNN",
-    "title": "",
+    "title": "Architecture Decision Record Template",
     "decision": "[Decision]",
     "rationale": "[Why]"
   }
