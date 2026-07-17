@@ -1,303 +1,310 @@
-# Athenas
+# Athena — Autonomous LLM Experimentation Laboratory
 
-An engineering platform for local artificial intelligence. Manages the complete lifecycle of local LLMs: discovery, profiling, benchmarking, certification, knowledge compilation, and execution across multiple runtimes.
+> **"Athena no ejecuta configuraciones; Athena descubre configuraciones."**
 
----
-
-## Philosophy
-
-Large language models are commodities. Inference runtimes are commodities. The only lasting differentiation is the **engineering system** that surrounds them.
-
-Athenas does not ship knowledge. Athenas ships the **ability to discover, validate, compile, and reuse knowledge** from live sources — man pages, CLI help output, language servers, package registries, and official documentation.
-
-The model is one interchangeable component inside a larger engineering system. The platform's competitive advantage is not the model itself, but the environment it assembles around the model.
+Athena es un laboratorio autónomo para evaluar, comparar y optimizar LLMs locales. No es un benchmark, no es un launcher, no es un wrapper de llama.cpp. Es un **sistema que diseña experimentos, ejecuta inferencia real, mide telemetría completa y produce conocimiento reproducible** sobre cualquier modelo GGUF en cualquier hardware con GPU NVIDIA.
 
 ---
 
-## The Problem
+## Filosofía
 
-LLMs fail in production for reasons that have nothing to do with model quality:
+Athena se basa en cuatro principios:
 
-- **Static knowledge.** Documentation shipped with a model becomes stale within weeks. The model doesn't know about Python 3.14, CUDA 13.5, or the latest compiler flags.
-- **Environment mismatch.** The model has no awareness of the user's hardware, installed tools, available debuggers, or system capabilities.
-- **Missing tools.** A model asked to fix a Go compilation error has no access to the Go compiler, the debugger, or the test runner. It guesses instead of verifying.
-- **No reproducibility.** Two users running the same model on the same prompt get different results because their environments differ. Benchmarks are not comparable.
-- **No measurement.** Without multi-layered benchmarks, there is no way to know whether a knowledge pack, a tool, or a workspace configuration actually improves outcomes.
+1. **Nada se estima — todo se mide.** No hay heurísticas ni `estimate()`. Cada decisión se basa en evidencia obtenida mediante ejecución real.
+2. **Cada experimento responde una pregunta científica.** No hay "benchmarks" genéricos. Cada prueba tiene una hipótesis y produce una conclusión verificable.
+3. **El conocimiento es acumulativo.** Los resultados se persisten como evidencia. Las configuraciones que fallan se registran para no repetirse.
+4. **Los agentes consumen artefactos, no texto.** Cualquier agente (Buffy, Hermes, Claude Code, Codex) puede leer fases individuales sin ejecutar nada.
 
 ---
 
-## The Solution
-
-Athenas structures the interaction between models and their environment as a **compilation pipeline**:
+## Arquitectura
 
 ```
-Sources (man pages, --help, LSP, APIs)
-    ↓
-Provider (discover → fetch → validate → normalize)
-    ↓
-Knowledge IR (intermediate representation)
-    ↓
-Compiler (compile → deduplicate → index)
-    ↓
-Knowledge Pack (versioned, cached, reproducible)
-    ↓
-Workspace (projection of system + tool + knowledge graphs)
-    ↓
-Certification (L0..L5 per-layer measurement)
-    ↓
-Agent (planning, tool execution, iterative repair)
+Study (Programa Científico)
+  │
+  ├── Campaign (Conjunto de experimentos)
+  │     │
+  │     ├── Experiment (Configuración única)
+  │     │     │
+  │     │     ├── Phase 1 → Hardware Discovery
+  │     │     ├── Phase 2 → Runtime Discovery
+  │     │     ├── Phase 3 → Runtime Capabilities
+  │     │     ├── Phase 4 → GGUF Inspection
+  │     │     ├── Phase 5 → Memory Hypothesis
+  │     │     ├── Phase 6 → Execution Laboratory 🔬 (inferencia real)
+  │     │     ├── Phase 7 → Runtime Fingerprint
+  │     │     ├── Phase 8 → Capability Discovery
+  │     │     ├── Phase 9 → Parameter Normalization
+  │     │     ├── Phase 10 → Output Validation
+  │     │     └── Phase 11 → Experiment Validation 🛡️
+  │     │
+  │     └── Evidence (Resultados y artefactos)
+  │
+  └── Knowledge Base (Conocimiento acumulado)
 ```
 
-Each layer is independently replaceable. The pipeline never changes — only the providers do.
+### Phase Pipeline — 11 fases científicas
+
+Cada fase responde **UNA** pregunta. No más.
+
+| Fase | Pregunta | Requiere |
+|------|----------|----------|
+| **PHASE-0001** Hardware | ¿Qué hardware existe? | — |
+| **PHASE-0002** Runtime Discovery | ¿Qué runtimes existen? | 0001 |
+| **PHASE-0003** Runtime Capabilities | ¿Qué capacidades reales tiene cada runtime? | 0002 |
+| **PHASE-0004** GGUF Inspection | ¿Qué dice realmente este modelo? | `--model` |
+| **PHASE-0005** Memory Hypothesis | ¿Qué configuraciones parecen posibles? | `--model` |
+| **PHASE-0006** Execution Laboratory | ¿Funciona esta configuración realmente? | `--model` + `--runtime` |
+| **PHASE-0007** Runtime Fingerprint | ¿Qué es realmente este runtime? | `--runtime` |
+| **PHASE-0008** Capability Discovery | ¿Qué capacidades declara realmente este runtime? | `--runtime` |
+| **PHASE-0009** Parameter Normalization | ¿Cuál es el conjunto común de parámetros? | — |
+| **PHASE-0010** Output Validation | ¿La salida obtenida es válida? | 0006 |
+| **PHASE-0011** Experiment Validation | ¿Este experimento merece ejecutarse? 🛡️ | — |
 
 ---
 
-## Architecture
+## Scientific Programs (Estudios)
 
-### Engine Layers
+Los estudios son programas científicos completos. Combina múltiples fases para responder una pregunta compleja.
 
-| Layer | Component | Responsibility | Status |
-|-------|-----------|----------------|--------|
-| L0 | Doctor | Hardware detection, model discovery, capability enumeration | ✅ |
-| L1 | Knowledge | Provider-based pack generation from live sources | ✅ |
-| L2 | Workspace | Environment generation from project detection | 🚧 |
-| L3 | Tools | Tool orchestration, permission, schema | 🚧 |
-| L4 | Agent | Planning, iteration, self-correction | 🚧 |
-| L5 | Experience | Procedural memory, skill caching | ❌ |
+### SP-005: Runtime Health Check
 
-### Engine Layer — Doctor
-
-Detects system capabilities, not just hardware. Reports installed languages, toolchains, debuggers, containers, and editors as a connected capability graph.
-
+```bash
+ath study SP-005
 ```
+
+Verifica que todos los runtimes detectados carguen correctamente, generen tokens y finalicen sin errores. Es la puerta de entrada del laboratorio.
+
+### PC-001: Runtime Comparison
+
+```bash
+ath study PC-001
+```
+
+Compara todos los runtimes detectados (Official, TurboQuant, PrismML) bajo exactamente los mismos parámetros. Cada runtime ejecuta 5 repeticiones. Mide load time, first token, TPS, VRAM, RAM y estabilidad.
+
+---
+
+## Instalación
+
+### Requisitos
+
+- **Rust** 2024 edition (`curl https://sh.rustup.rs -sSf | sh`)
+- **CUDA** 12.x+ y NVIDIA driver (`nvidia-smi` debe funcionar)
+- **llama.cpp** (al menos un build con `llama-server`)
+- **Modelo GGUF** (por ejemplo, Qwen 3.5 4B Q4_K_M)
+
+### Compilar
+
+```bash
+git clone <repo>
+cd athenas
+
+# Release build (recomendado para inferencia)
+cargo build --release --manifest-path crates/athenas-compiler/Cargo.toml
+
+# El binario se encuentra en:
+# crates/athenas-compiler/target/release/ath
+```
+
+### Verificar instalación
+
+```bash
+./crates/athenas-compiler/target/release/ath doctor
+```
+
+Debe detectar GPU, VRAM, RAM, CPU, runtimes (llama.cpp, TurboQuant, PrismML, Ollama, etc.) y modelos GGUF.
+
+---
+
+## Uso básico
+
+### Descubrir hardware y runtimes
+
+```bash
+# Detectar todo
 ath doctor
-  🖥  CPU: Intel i5-13420H (12 cores, 16 threads)
-  🎮 GPU: NVIDIA RTX 3050 6GB (driver 595.84)
-  💾 RAM: 15.3 GB total (10.4 GB available)
-  💻 OS: Kali Linux 2026 (x86_64)
-  📦 Models: Qwen 4B (Q4_K_M), Qwen 9B (IQ3_XXS)
-  🎯 Capabilities: text-generation, coding, tool-calling, reasoning
+
+# Listar las 11 fases disponibles
+ath phase list
 ```
 
-Use `--json` for machine-readable output.
+### Ejecutar una fase individual
 
-### Engine Layer — Knowledge
+```bash
+# Hardware
+ath phase run PHASE-0001-hardware
 
-The Knowledge Compiler transforms live documentation into structured, versioned, cached artifacts. It follows the same pipeline as the documentation compiler:
+# Runtime Discovery
+ath phase run PHASE-0002-runtime-discovery
 
+# Fingerprint de un runtime específico
+ath phase run PHASE-0007-runtime-fingerprint \
+  --runtime /path/to/llama-server
+
+# Inspeccionar un modelo GGUF
+ath phase run PHASE-0004-gguf-inspection \
+  --model /path/to/model.gguf
+
+# Ejecutar inferencia real (PHASE-0006)
+ath phase run PHASE-0006-execution-lab \
+  --runtime /path/to/llama-server \
+  --model /path/to/model.gguf
 ```
-Markdown → Parser → AST → Graph → Artifacts
-Sources  → Provider → IR  → Pack → Workspace
+
+### Ejecutar un estudio científico completo
+
+```bash
+# Health Check
+ath study SP-005
+
+# Runtime Comparison (tarda más)
+ath study PC-001
 ```
 
-The trait that every provider implements:
+### Gestionar experimentos
+
+```bash
+# Añadir experimento a la cola
+ath queue add --model /path/to/model.gguf
+
+# Procesar siguiente experimento
+ath queue process
+
+# Ver estado de la cola
+ath queue list
+
+# Ver detalle de un experimento
+ath queue show --experiment EXP-1234567890
+
+# Limpiar experimentos antiguos
+ath queue clean --days 7
+```
+
+### Analizar un modelo
+
+```bash
+ath analyze /path/to/model.gguf
+```
+
+### Recomendar configuración
+
+```bash
+ath recommend "Rust Development"
+ath recommend "Frontend"
+ath recommend "Web Pentest"
+```
+
+---
+
+## Cómo añadir un runtime nuevo
+
+Athena detecta runtimes automáticamente buscando en `$PATH` y directorios de compilación comunes (`~/llama.cpp/build/bin/`, `~/prism-llama.cpp/build/bin/`, etc.).
+
+Para añadir un runtime manualmente, basta con que el binario `llama-server` esté accesible. Athena lo descubrirá en la próxima ejecución de `PHASE-0002-runtime-discovery` o `ath doctor`.
+
+Si el runtime tiene capacidades especiales (TurboQuant, Bonsai, ISWA, etc.), Athena las detecta automáticamente analizando la salida de `--help`.
+
+---
+
+## Cómo añadir un modelo nuevo
+
+Athena busca modelos GGUF en directorios comunes (`~/models/`, `~/AI/`, `~/Downloads/`).
+
+Para añadir un modelo manualmente:
+
+```bash
+# Coloca el GGUF en cualquier directorio
+mkdir -p ~/models/qwen3.5
+# Copia o descarga el modelo allí
+
+# Athena lo detectará con:
+ath doctor
+# o
+ath phase run PHASE-0002-runtime-discovery
+```
+
+Para inspeccionar un modelo específico:
+
+```bash
+ath phase run PHASE-0004-gguf-inspection --model ~/models/tu-modelo.gguf
+```
+
+---
+
+## Cómo crear un Programa Científico
+
+Los programas científicos se definen en `crates/athenas-compiler/src/runtime/study/mod.rs`, en la función `built_in_studies()`.
+
+Cada estudio necesita:
 
 ```rust
-trait KnowledgeProvider {
-    fn id(&self) -> &str;
-    fn discover(&self, query: &str) -> Result<Vec<KnowledgeSource>, String>;
-    fn fetch(&self, source: &KnowledgeSource) -> Result<RawKnowledge, String>;
-    fn validate(&self, raw: &RawKnowledge) -> Result<ValidationReport, String>;
-    fn normalize(&self, raw: RawKnowledge) -> Result<KnowledgeIR, String>;
+Study {
+    id: "PC-002",                          // ID único
+    question: "¿Pregunta científica?",      // Pregunta que responde
+    phase_ids: vec!["PHASE-0001", ...],     // Fases necesarias
+    repetitions: 5,                         // Repeticiones por runtime
+    default_context: 32768,                 // Contexto por defecto
+    default_max_tokens: 100,               // Tokens por defecto
+    objective: "maximum_quality",           // Objetivo
+    success_criteria: vec!["no_oom", ...], // Criterios de éxito
+    validate_before_execution: true,       // Validar antes de ejecutar
+    store_evidence: true,                  // Almacenar evidencia
 }
 ```
 
-Providers never create packs. They emit KnowledgeIR. The compiler transforms IR into packs. This separation keeps providers reusable and the compiler extensible.
+---
 
-**Available providers:**
-
-| Provider | Source | Status |
-|----------|--------|--------|
-| `man` | Unix man pages | ✅ |
-| `help` | CLI --help output | 🚧 |
-| `lsp` | Language server protocol | 🚧 |
-| `doc` | Official documentation | ❌ |
-
-Use `ath knowledge build <provider> <query>` to generate a pack:
+## Archivos que produce Athena
 
 ```
-ath knowledge build man go-build
+.state/
+  experiments/
+    EXP-<timestamp>/
+      phases/
+        PHASE-0001-hardware/
+          artifact.json      ← Datos estructurados
+          metrics.json       ← Métricas numéricas
+          timeline.json       ← Línea de tiempo de eventos
+          evidence/           ← Evidencia adicional
+      report.json            ← Reporte completo del experimento
+
+  queue/
+    queue.json               ← Estado de la cola de experimentos
+
+  evidence/
+    negative/                ← Experimentos rechazados (nunca repetir)
+      NEG-<timestamp>/
+        evidence.json
+    positive/                ← Experimentos exitosos
+      POS-<timestamp>/
+        evidence.json
+    index.json               ← Índice de búsqueda rápida
 ```
 
-This produces a structured build report showing extracted items by type, deduplication metrics, validation status, and compilation time.
+Cada `artifact.json` contiene:
 
-### Engine Layer — Certification
-
-Certification measures the contribution of each architectural layer independently. Instead of asking "how fast is this model?", it answers "how much does each layer improve this model?"
-
-| Level | Configuration | Expected Improvement |
-|-------|--------------|---------------------|
-| L0 | Raw model | Baseline |
-| L1 | + Knowledge Pack | +15-25% |
-| L2 | + Workspace | +10-15% |
-| L3 | + Tool Execution | +25-35% |
-| L4 | + Iterative Repair | +5-15% |
-| L5 | + Experience Cache | +5-10% |
-
-Use `ath certify --pack <id>` to run a two-phase benchmark (raw vs packed) that measures the knowledge layer's contribution directly:
-
-```
-📊 COMPARISON: Raw vs Packed
-Metric               Raw           Packed        Δ
-TTFT (ms)             71.0           68.2      -3.9%
-Tokens/sec            42.3           44.1
-Generated tokens       100            100
-```
+- **phase_id**: Identificador único de la fase
+- **status**: Success / Failure / Skipped
+- **metrics**: Valores numéricos con unidades
+- **timeline**: Eventos durante la ejecución
+- **duration_ms**: Duración real
+- **raw_log_path**: Ruta a logs sin procesar
 
 ---
 
-## Commands
+## Visión
 
-### Documentation Compiler
+Athena no busca el mejor benchmark.
 
-| Command | Description |
-|---------|-------------|
-| `ath build` | Full pipeline: validate → graph → artifacts (default) |
-| `ath validate` | Schema validation, ID uniqueness, reference integrity |
-| `ath graph` | Build knowledge graph from markdown documents |
+Athena busca **descubrir conocimiento reproducible** sobre cómo se comportan los modelos locales en hardware real.
 
-### System
+Cada experimento es una oportunidad de aprender algo que no sabíamos. Cada resultado fallido es evidencia valiosa que evita repetir errores. Cada nuevo runtime o modelo es un organismo vivo que Athena debe estudiar, no un simple binario que ejecutar.
 
-| Command | Description |
-|---------|-------------|
-| `ath doctor` | Detect hardware, discover models, list capabilities |
-| `ath doctor --json` | Machine-readable hardware and model report |
-
-### Inference
-
-| Command | Description |
-|---------|-------------|
-| `ath run --prompt "..."` | Run inference via llama.cpp |
-| `ath run --workspace workspace-go` | Run with workspace system prompt |
-| `ath run -m model.gguf --json` | Structured JSON output |
-
-### Certification
-
-| Command | Description |
-|---------|-------------|
-| `ath certify` | Benchmark a model against a capability |
-| `ath certify --pack go` | Two-phase benchmark (raw vs packed) |
-| `ath certify --capability coding` | Test specific capability |
-
-### Knowledge Packs
-
-| Command | Description |
-|---------|-------------|
-| `ath pack list` | List all available knowledge packs |
-| `ath pack show go` | Show pack details, tool status, benchmarks |
-| `ath knowledge build man go-build` | Generate pack from man page |
-
-### Workspaces
-
-| Command | Description |
-|---------|-------------|
-| `ath workspace list` | List available workspaces |
-| `ath workspace create go` | Generate workspace with system prompt |
+> Athena no es un producto terminado. Es un laboratorio que aprende.
 
 ---
 
-## Project Layout
-
-```
-├── crates/
-│   └── athenas-compiler/         # Single Rust crate
-│       └── src/
-│           ├── main.rs           # CLI entry point (ath)
-│           ├── parser.rs         # Markdown front-matter parser
-│           ├── validator.rs      # JSON Schema validation
-│           ├── graph.rs          # Knowledge graph builder
-│           ├── generators.rs     # Artifact generators
-│           ├── lib.rs            # Utility library
-│           └── runtime/
-│               ├── mod.rs        # Runtime trait + LlamaServerRuntime
-│               ├── hardware.rs   # Hardware auto-detection
-│               ├── knowledge.rs  # KnowledgeProvider trait + compiler
-│               ├── knowledge_ir.rs # Intermediate representation
-│               └── providers/
-│                   ├── mod.rs    # Provider module declarations
-│                   └── man_provider.rs # Man page provider
-├── schemas/                      # JSON Schema per document type (16)
-├── knowledge/
-│   ├── packs/                    # Static knowledge packs (YAML)
-│   └── ontology/                 # Entity ontology definitions
-├── .github/workflows/            # 8 CI/CD workflows
-│   ├── validate.yml              # PR validation
-│   ├── knowledge.yml             # Knowledge graph build
-│   ├── rust.yml                  # Cargo build + test + clippy
-│   ├── documentation.yml         # Doc site generation
-│   └── ...
-├── .state/                       # Machine-readable project state
-├── CONST-0001.md                 # Project constitution
-├── CURRENT_CONTEXT.md            # Daily agent context
-├── BOOTSTRAP.md                  # Agent onboarding
-├── knowledge.md                  # Project index
-└── README.md                     # This file
-```
-
----
-
-## Design Principles
-
-### Everything is a compiler.
-
-The same pipeline — source → parser → IR → compilation → artifact — applies to documentation, knowledge, and eventually tools and workspaces. Consistency across domains makes the architecture teachable to future agents.
-
-### Everything is reproducible.
-
-Given the same sources and providers, Athena produces identical artifacts. Man pages are deterministic. `--help` output is deterministic. LSP responses are deterministic. Caches are portable.
-
-### Everything is measurable.
-
-Every compilation produces a `CompileMetrics` report: raw bytes, items extracted, validation errors, deduplication count, compilation time. Every certification produces a per-layer improvement delta. If a feature cannot produce a metric, it does not belong.
-
-### Knowledge is generated, not shipped.
-
-Static knowledge packs are compiled artifacts. They are generated, cached, versioned, and disposable. The canonical source is always a live provider — a man page, a CLI, an API. The repository never contains knowledge that can become stale.
-
-### Artifacts are disposable; sources are truth.
-
-Generated packs, search indexes, and knowledge graphs are never edited by hand. They are rebuilt from sources. This guarantees consistency and prevents documentation rot.
-
-### Providers emit IR; compilers emit artifacts.
-
-Providers never know about KnowledgePack, YAML, or search indexes. They emit `KnowledgeIR`. The compiler transforms `KnowledgeIR` into artifacts. New providers can be added without modifying the compiler. New artifact formats can be added without modifying providers.
-
----
-
-## Roadmap
-
-| Phase | Focus | Status |
-|-------|-------|--------|
-| M0 | Foundation: Constitution, architecture, compiler specification | ✅ |
-| M1 | Documentation compiler: validate, graph, build, artifacts | ✅ |
-| M2 | Runtime spike: `ath run` with llama.cpp integration | ✅ |
-| M3 | Certification engine: `ath doctor`, `ath certify` | ✅ |
-| M4 | Knowledge engine: KnowledgeProvider trait, ManProvider | ✅ |
-| M5 | Workspace engine: `ath workspace`, environment generation | 🚧 |
-| M6 | Tool engine: unified tool registry, permissions, schemas | 🚧 |
-| M7 | Agent engine: planning, iteration, self-correction | 🚧 |
-| M8 | Dashboard: Astro-based visualization of all subsystems | 🚧 |
-| M9 | Experience engine: procedural memory, skill caching | ❌ |
-
----
-
-## Contributing
-
-Athenas follows a strict engineering process documented in `CONST-0001` and `DIRECTIVE-0001`. Key rules:
-
-- **Knowledge precedes implementation.** Never write code without a specification.
-- **Evidence outweighs intuition.** Back every claim with data.
-- **Traceability is absolute.** Reference by ID, never by name.
-- **No optimization without measurement.** Baseline first, then optimize.
-- **Capabilities over implementations.** Depend on interfaces, not tools.
-- **Architecture must survive technology changes.** Design for longevity.
-- **Every experiment becomes knowledge.** Never discard data.
-- **Write for humans and agents.** Machine-readable metadata in every document.
-
-Read `BOOTSTRAP.md` first — it contains the complete onboarding for new contributors.
-
----
-
-## License
+## Licencia
 
 MIT

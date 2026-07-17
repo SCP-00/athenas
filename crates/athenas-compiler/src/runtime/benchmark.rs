@@ -1109,7 +1109,7 @@ fn run_benchmark_certify_inner(
         experiment,
     };
 
-    // Persist to research database
+    // ── Persist to Research Database (old) ──
     let db = ResearchDatabase::new();
     match db.save(&report) {
         Ok(eid) => {
@@ -1120,6 +1120,120 @@ fn run_benchmark_certify_inner(
         Err(e) => {
             if !json_output {
                 eprintln!("  ⚠ Failed to persist experiment: {e}");
+            }
+        }
+    }
+
+    // ── Persist to Capability Database V2 ──
+    {
+        use super::database::{
+            CapabilityDatabase, ModelMetadata, HistoryEntry, CertState,
+        };
+        use super::evaluation::{
+            DefaultEngineeringEvaluator, EngineeringEvaluator,
+            ExitCodeSignalProvider, FileChangeSignalProvider,
+            EvaluationContext,
+        };
+
+        let cap_db = CapabilityDatabase::new();
+        let model_id = report.model["id"].as_str().unwrap_or("unknown");
+
+        // Build EvaluationContext from benchmark results
+        let mut commands = Vec::new();
+        for level in &report.levels {
+            commands.push(format!("benchmark:{}:{}tasks", level.level.short(), level.total));
+        }
+
+        let ctx = EvaluationContext {
+            working_dir: std::path::PathBuf::from("."),
+            files_changed: Vec::new(),  // benchmarks don't modify files
+            commands_executed: commands,
+            model_output: None,
+        };
+
+        // Run engineering evaluation
+        let mut evaluator = DefaultEngineeringEvaluator::new();
+        evaluator.register(Box::new(ExitCodeSignalProvider));
+        evaluator.register(Box::new(FileChangeSignalProvider));
+        let eng_report = evaluator.evaluate(&ctx);
+
+        let eng_score = eng_report.engineering_score();
+        let cap_score = report.levels.last()
+            .map(|l| l.avg_score)
+            .unwrap_or(0.0);
+        let reliability = if eng_report.reliability.total_executions > 0 {
+            eng_report.reliability.success_rate
+        } else {
+            // Derive from pass rate
+            report.levels.last().map(|l| l.pass_rate).unwrap_or(0.0)
+        };
+
+        let model_params = report.model["parameters_b"].as_f64().unwrap_or(0.0);
+        let model_family = report.model["architecture"].as_str().unwrap_or("unknown");
+        let quant = report.model["quantization"].as_str().unwrap_or("Q4_K_M");
+
+        let metadata = ModelMetadata {
+            model_id: model_id.to_string(),
+            family: model_family.to_string(),
+            quantization: quant.to_string(),
+            runtime: "llama.cpp".to_string(),
+            parameters_b: model_params,
+            created: report.timestamp.clone(),
+            last_seen: chrono::Utc::now().to_rfc3339(),
+            status: CertState::Valid.name().to_string(),
+        };
+
+        let history_entry = HistoryEntry {
+            timestamp: chrono::Utc::now().to_rfc3339(),
+            task: report.benchmark_name.clone(),
+            prompt_hash: format!("{:x}", report.benchmark_name.bytes().fold(0u64, |acc, b| acc.wrapping_mul(31).wrapping_add(b as u64))
+                ^ report.timestamp.bytes().fold(0u64, |acc, b| acc.wrapping_mul(17).wrapping_add(b as u64))),
+            runtime: "llama.cpp".to_string(),
+            model: model_id.to_string(),
+            engineering_score: eng_score,
+            capability_score: cap_score,
+            reliability_score: reliability,
+            signals: serde_json::to_value(&eng_report.evidence).unwrap_or_default(),
+            evidence: serde_json::json!({
+                "benchmark": report.benchmark_name,
+                "levels": report.levels.len(),
+                "total_gain": report.total_gain,
+                "experiment_id": report.experiment_id,
+            }),
+            git_commit: get_git_commit(),
+            athena_version: env!("CARGO_PKG_VERSION").to_string(),
+            state: CertState::Valid.name().to_string(),
+            duration_ms: report.total_duration_ms,
+            total_tokens: report.levels.iter().map(|l| l.total_tokens).sum(),
+            success: reliability >= 0.5,
+        };
+
+        match cap_db.save_certification(model_id, &metadata, &history_entry) {
+            Ok(()) => {
+                if !json_output {
+                    println!("  💾 Certification saved: .state/models/{}/", model_id);
+                }
+            }
+            Err(e) => {
+                if !json_output {
+                    eprintln!("  ⚠ Failed to persist certification: {e}");
+                }
+            }
+        }
+
+        // Prune invalid models
+        let models = super::find_all_models();
+        let existing_ids: Vec<String> = models.into_iter().map(|m| m.id).collect();
+        match cap_db.prune(&existing_ids) {
+            Ok(count) => {
+                if count > 0 && !json_output {
+                    println!("  🧹 Pruned {} stale model certifications", count);
+                }
+            }
+            Err(e) => {
+                if !json_output {
+                    eprintln!("  ⚠ Prune failed: {e}");
+                }
             }
         }
     }

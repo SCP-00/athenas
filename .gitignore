@@ -64,3 +64,28 @@ logs/
 
 # Project specific
 .git-commit-marker
+
+# Generated project data (from ath env init)
+.athena/
+
+# Athena runtime artifacts — experiments, queue, evidence, logs
+.state/
+.state/**
+
+# Agent design documents (committed separately via .agents/ARCH-*)
+# .agents/ is committed but .state/ is never committed
+
+# Personal hardware data — never commit
+/home/buendia001/
+
+# Generated reports
+reports/
+*.report.*
+
+# Athena cache
+cache/
+*.cache
+
+# Temporary files
+tmp/
+*.tmp

@@ -1,9 +1,26 @@
+pub mod agent;
 pub mod benchmark;
 pub mod benchmarks;
+pub mod database;
+pub mod environment;
+pub mod execution_lab;
+pub mod evaluation;
+pub mod experiment;
+pub mod experiment_queue;
+pub mod graph;
 pub mod hardware;
 pub mod knowledge;
 pub mod knowledge_ir;
+pub mod model_intelligence;
+pub mod phase;
 pub mod providers;
+pub mod runtime_discovery;
+pub mod study;
+pub mod runtime_fingerprint;
+pub mod knowledge_base;
+pub mod campaign;
+pub mod tui;
+pub mod scheduler;
 
 use std::io::{Read, Write};
 use std::net::TcpStream;
