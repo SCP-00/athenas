@@ -165,6 +165,10 @@ enum Commands {
         /// Output structured JSON instead of human-readable format
         #[arg(short, long)]
         json: bool,
+
+        /// Use MockRuntime (deterministic, no GPU needed, for CI testing)
+        #[arg(short = 'M', long)]
+        mock: bool,
     },
 
     /// List and inspect knowledge packs
@@ -743,6 +747,35 @@ fn run_doctor(json_output: bool) -> anyhow::Result<i32> {
     Ok(0)
 }
 
+/// Run certification with MockRuntime for deterministic CI testing.
+/// No GPU, no model files, no llama-server needed.
+fn run_mock_certify(
+    runner: &dyn runtime::benchmark::BenchmarkRunner,
+    level: u8,
+    pack_id: Option<&str>,
+    max_tokens: usize,
+    json_output: bool,
+) -> anyhow::Result<()> {
+    println!("╔══════════════════════════════════════════╗");
+    println!("║  Athenas Mock Certification (CI Mode)   ║");
+    println!("╚══════════════════════════════════════════╝");
+    println!();
+    println!("🎯 Benchmark: {}", runner.id());
+    println!("📋 Mode:      Mock (deterministic, no GPU)");
+    println!("📏 Level:     L{level}");
+    println!();
+
+    let _report = runtime::benchmark::run_benchmark_certify_mock(
+        runner,
+        level,
+        pack_id,
+        max_tokens,
+        json_output,
+    )?;
+
+    Ok(())
+}
+
 fn run_benchmark(rt: &impl Runtime, prompt: &str, max_tokens: usize) -> anyhow::Result<runtime::InferenceResult> {
     let params = InferenceParams {
         max_tokens,
@@ -1171,6 +1204,7 @@ fn main() -> anyhow::Result<()> {
             max_tokens,
             server_path,
             json,
+            mock,
         }) => {
             // Build benchmark registry with available runners
             let mut registry = BenchmarkRegistry::new();
@@ -1191,8 +1225,13 @@ fn main() -> anyhow::Result<()> {
                         registry.list()
                     ))?;
 
+                if *mock {
+                    // Mock mode: deterministic, no GPU needed, for CI testing
+                    return run_mock_certify(runner, *level, pack.as_deref(), *max_tokens, *json);
+                }
+
                 let model = model.as_deref().ok_or_else(|| {
-                    anyhow::anyhow!("Model path required for benchmark certification. Use --model <path>")
+                    anyhow::anyhow!("Model path required for benchmark certification. Use --model <path> or --mock for CI testing")
                 })?;
 
                 let _report = runtime::benchmark::run_benchmark_certify(
@@ -1207,6 +1246,9 @@ fn main() -> anyhow::Result<()> {
                 )?;
 
                 std::process::exit(0);
+            } else if *mock {
+                // Without benchmark, ask for one or use default
+                anyhow::bail!("--mock requires --benchmark <id>. Available: {:?}", registry.list());
             } else {
                 // Legacy capability mode — backward compatible
                 let exit_code = run_certify(

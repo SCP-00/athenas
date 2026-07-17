@@ -11,6 +11,92 @@ use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 use std::time::{Duration, Instant};
 
+// ---------------------------------------------------------------------------
+// MockRuntime — deterministic inference for CI testing
+// ---------------------------------------------------------------------------
+
+/// A mock runtime that returns deterministic responses based on prompt matching.
+/// No external processes, no GPU required. Enables full certification pipeline testing in CI.
+pub struct MockRuntime {
+    /// Map of prompt patterns (substring match) to responses
+    responses: Vec<(String, String)>,
+    /// Default response if no pattern matches
+    default_response: String,
+    /// Simulated TTFT in ms
+    ttft_ms: f64,
+    /// Simulated tokens per second
+    tokens_per_second: f64,
+}
+
+impl MockRuntime {
+    pub fn new() -> Self {
+        Self {
+            responses: Vec::new(),
+            default_response: "Mock response: task completed successfully.".to_string(),
+            ttft_ms: 5.0,
+            tokens_per_second: 100.0,
+        }
+    }
+
+    pub fn with_response(mut self, pattern: &str, response: &str) -> Self {
+        self.responses.push((pattern.to_string(), response.to_string()));
+        self
+    }
+
+    pub fn with_default_response(mut self, response: &str) -> Self {
+        self.default_response = response.to_string();
+        self
+    }
+
+    pub fn with_latency(mut self, ttft_ms: f64, tokens_per_second: f64) -> Self {
+        self.ttft_ms = ttft_ms;
+        self.tokens_per_second = tokens_per_second;
+        self
+    }
+
+    fn find_matching_response(&self, prompt: &str) -> &str {
+        for (pattern, response) in &self.responses {
+            if prompt.contains(pattern) {
+                return response;
+            }
+        }
+        &self.default_response
+    }
+}
+
+impl Runtime for MockRuntime {
+    fn name(&self) -> &str {
+        "mock"
+    }
+
+    fn load_model(&mut self, _model_path: &Path) -> anyhow::Result<()> {
+        // No-op: mock has no actual model
+        Ok(())
+    }
+
+    fn complete(&self, prompt: &str, _params: &InferenceParams) -> anyhow::Result<InferenceResult> {
+        // Simulate processing delay
+        std::thread::sleep(std::time::Duration::from_millis(2));
+
+        let response = self.find_matching_response(prompt);
+        let token_count = response.split_whitespace().count().max(1);
+        let gen_time_ms = (token_count as f64 / self.tokens_per_second) * 1000.0;
+
+        Ok(InferenceResult {
+            text: response.to_string(),
+            ttft_ms: self.ttft_ms,
+            tokens_per_second: self.tokens_per_second,
+            total_tokens: token_count,
+            prompt_tokens: prompt.split_whitespace().count(),
+            total_duration_ms: self.ttft_ms + gen_time_ms,
+        })
+    }
+
+    fn unload(&mut self) -> anyhow::Result<()> {
+        Ok(())
+    }
+}
+
 /// Configuration for model inference
 #[derive(Debug, Clone)]
 pub struct InferenceParams {
@@ -465,7 +551,7 @@ pub fn find_model(override_path: Option<&Path>) -> anyhow::Result<PathBuf> {
 }
 
 /// Convenience wrapper: run inference with InferenceParams built from max_tokens
-pub fn run_benchmark(rt: &impl Runtime, prompt: &str, max_tokens: usize) -> anyhow::Result<InferenceResult> {
+pub fn run_benchmark(rt: &dyn Runtime, prompt: &str, max_tokens: usize) -> anyhow::Result<InferenceResult> {
     let params = InferenceParams {
         max_tokens,
         ..Default::default()
