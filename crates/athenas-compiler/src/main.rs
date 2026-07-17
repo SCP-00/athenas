@@ -1175,6 +1175,7 @@ fn main() -> anyhow::Result<()> {
             // Build benchmark registry with available runners
             let mut registry = BenchmarkRegistry::new();
             registry.register(Box::new(runtime::benchmarks::human_eval::HumanEvalRunner::new()));
+            registry.register(Box::new(runtime::benchmarks::aider_polyglot::AiderPolyglotRunner::new()));
 
             if let Some(benchmark_id) = benchmark {
                 // Warn if capability is also set (it's ignored in benchmark mode)
