@@ -1,3 +1,4 @@
+use crate::runtime::Runtime;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -317,112 +318,291 @@ pub fn resolve_validator(validation_type: &str) -> Box<dyn Validator> {
 }
 
 // ---------------------------------------------------------------------------
-// Capability Database — persist certification runs
+// Execution Runtime — Chatty's general execution abstraction
 // ---------------------------------------------------------------------------
 
-const CAPABILITIES_DIR: &str = ".state/capabilities";
+/// Configuration passed to an executor before execution begins
+#[derive(Debug, Clone)]
+pub struct ExecutionContext {
+    pub model_path: Option<PathBuf>,
+    pub server_path: Option<PathBuf>,
+    pub max_tokens: usize,
+    pub temperature: f64,
+    pub working_dir: Option<PathBuf>,
+}
 
-/// A single persisted certification entry
+impl Default for ExecutionContext {
+    fn default() -> Self {
+        Self {
+            model_path: None, server_path: None,
+            max_tokens: 512, temperature: 0.7,
+            working_dir: None,
+        }
+    }
+}
+
+/// Output from executing a task through a Runtime
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CapabilityEntry {
-    pub id: String,
+pub struct ExecutionOutput {
+    pub text: String,
+    pub ttft_ms: f64,
+    pub tokens_per_second: f64,
+    pub total_tokens: usize,
+    pub exit_code: Option<i32>,
+    pub stderr: Option<String>,
+}
+
+/// Execution Runtime trait — separates HOW execution happens from WHAT is executed.
+/// The Runner describes the task. The Runtime executes it. The Validator checks it.
+/// Uses anyhow::Result to allow ? in certification pipeline without String→anyhow conversion.
+pub trait Executor: Send + Sync {
+    fn id(&self) -> &str;
+    /// Prepare the execution environment (load model, start container, etc.)
+    fn prepare(&mut self, ctx: &ExecutionContext) -> anyhow::Result<()>;
+    /// Execute a single task. Takes the augmented prompt, returns execution output.
+    fn execute(&self, input: &str) -> anyhow::Result<ExecutionOutput>;
+    /// Clean up after execution (unload model, stop containers, etc.)
+    fn cleanup(&mut self) -> anyhow::Result<()>;
+}
+
+/// MockExecutor — deterministic execution for CI testing (no GPU, no external processes)
+pub struct MockExecutor {
+    responses: Vec<(String, String)>,
+    default_response: String,
+    ttft_ms: f64,
+    tokens_per_second: f64,
+}
+
+impl MockExecutor {
+    pub fn new() -> Self {
+        Self {
+            responses: Vec::new(),
+            default_response: "Mock executor: task completed.".to_string(),
+            ttft_ms: 5.0, tokens_per_second: 100.0,
+        }
+    }
+    pub fn with_response(mut self, pattern: &str, response: &str) -> Self {
+        self.responses.push((pattern.to_string(), response.to_string())); self
+    }
+    pub fn with_default_response(mut self, response: &str) -> Self {
+        self.default_response = response.to_string(); self
+    }
+    pub fn with_latency(mut self, ttft: f64, tps: f64) -> Self {
+        self.ttft_ms = ttft; self.tokens_per_second = tps; self
+    }
+    fn find_match(&self, input: &str) -> &str {
+        for (pattern, response) in &self.responses {
+            if input.contains(pattern) { return response; }
+        }
+        &self.default_response
+    }
+}
+
+impl Executor for MockExecutor {
+    fn id(&self) -> &str { "mock" }
+    fn prepare(&mut self, _ctx: &ExecutionContext) -> anyhow::Result<()> { Ok(()) }
+    fn execute(&self, input: &str) -> anyhow::Result<ExecutionOutput> {
+        std::thread::sleep(std::time::Duration::from_millis(1));
+        let text = self.find_match(input).to_string();
+        let tokens = text.split_whitespace().count().max(1);
+        Ok(ExecutionOutput {
+            text, ttft_ms: self.ttft_ms, tokens_per_second: self.tokens_per_second,
+            total_tokens: tokens, exit_code: Some(0), stderr: None,
+        })
+    }
+    fn cleanup(&mut self) -> anyhow::Result<()> { Ok(()) }
+}
+
+/// InferenceExecutor — wraps the existing inference Runtime trait for LLM-based tasks
+pub struct InferenceExecutor {
+    inner: Option<Box<dyn crate::runtime::Runtime>>,
+    ctx: ExecutionContext,
+}
+
+impl InferenceExecutor {
+    pub fn new() -> Self { Self { inner: None, ctx: ExecutionContext::default() } }
+}
+
+impl Executor for InferenceExecutor {
+    fn id(&self) -> &str { "inference" }
+
+    fn prepare(&mut self, ctx: &ExecutionContext) -> anyhow::Result<()> {
+        self.ctx = ctx.clone();
+        let model_path = ctx.model_path.as_ref().ok_or_else(|| anyhow::anyhow!("No model path provided"))?;
+        let mut builder = crate::runtime::LlamaServerRuntime::new();
+        if let Some(sp) = &ctx.server_path {
+            builder = builder.with_server_path(sp.clone());
+        }
+        builder.load_model(model_path)?;
+        self.inner = Some(Box::new(builder));
+        Ok(())
+    }
+
+    fn execute(&self, input: &str) -> anyhow::Result<ExecutionOutput> {
+        let rt = self.inner.as_ref().ok_or_else(|| anyhow::anyhow!("Executor not prepared (no model loaded)"))?;
+        let result = crate::runtime::run_benchmark(rt.as_ref(), input, self.ctx.max_tokens)?;
+        Ok(ExecutionOutput {
+            text: result.text,
+            ttft_ms: result.ttft_ms,
+            tokens_per_second: result.tokens_per_second,
+            total_tokens: result.total_tokens,
+            exit_code: Some(0),
+            stderr: None,
+        })
+    }
+
+    fn cleanup(&mut self) -> anyhow::Result<()> {
+        if let Some(mut rt) = self.inner.take() {
+            rt.unload()?;
+        }
+        Ok(())
+    }
+}
+
+/// Resolve executor based on mode: mock or inference
+pub fn resolve_executor(mock: bool, ctx: &ExecutionContext) -> anyhow::Result<Box<dyn Executor>> {
+    if mock {
+        Ok(Box::new(MockExecutor::new()
+            .with_latency(5.0, 100.0)
+            .with_default_response("Mock response: certification test completed.")))
+    } else {
+        let mut exec = InferenceExecutor::new();
+        let ec = ctx.clone();
+        exec.prepare(&ec)?;
+        Ok(Box::new(exec))
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Research Database — persist certification experiments
+// ---------------------------------------------------------------------------
+
+const EXPERIMENTS_DIR: &str = ".state/experiments";
+
+/// Generate a unique experiment ID
+fn generate_experiment_id() -> String {
+    let now = chrono::Utc::now();
+    let ts = now.format("%Y%m%d-%H%M%S").to_string();
+    let nanos = now.timestamp_subsec_nanos() % 1000000;
+    format!("EXP-{}-{:06}", ts, nanos)
+}
+
+/// Get current git commit hash (best-effort)
+fn get_git_commit() -> String {
+    std::process::Command::new("git")
+        .args(["rev-parse", "--short", "HEAD"])
+        .output()
+        .ok()
+        .and_then(|o| {
+            if o.status.success() {
+                String::from_utf8(o.stdout).ok().map(|s| s.trim().to_string())
+            } else { None }
+        })
+        .unwrap_or_else(|| "unknown".to_string())
+}
+
+/// A single experiment entry — richer than CapabilityEntry, stores full context
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ExperimentEntry {
+    pub experiment_id: String,
     pub timestamp: String,
+    pub git_commit: String,
+    pub ath_version: String,
     pub benchmark_id: String,
     pub benchmark_name: String,
+    pub benchmark_version: String,
     pub model_id: String,
     pub model_params: f64,
+    pub runtime_id: String,
+    pub runtime_version: String,
     pub hardware: serde_json::Value,
     pub level_results: Vec<LevelResult>,
     pub total_gain: f64,
     pub total_duration_ms: f64,
+    pub knowledge_pack_id: Option<String>,
     pub config: serde_json::Value,
-    pub ath_version: String,
 }
 
-/// Database of certification results
-pub struct CapabilityDatabase {
+/// Research Database — treats every certification as a scientific experiment
+pub struct ResearchDatabase {
     base_path: PathBuf,
 }
 
-impl CapabilityDatabase {
-    pub fn new() -> Self {
-        Self { base_path: PathBuf::from(CAPABILITIES_DIR) }
-    }
+impl ResearchDatabase {
+    pub fn new() -> Self { Self { base_path: PathBuf::from(EXPERIMENTS_DIR) } }
+    pub fn with_path(path: PathBuf) -> Self { Self { base_path: path } }
 
-    pub fn with_path(path: PathBuf) -> Self {
-        Self { base_path: path }
-    }
-
-    /// Save a certification report as a capability entry
+    /// Save a certification report as an experiment entry
     pub fn save(&self, report: &CertificationReport) -> anyhow::Result<String> {
         std::fs::create_dir_all(&self.base_path)?;
 
+        let experiment_id = generate_experiment_id();
+        let git_commit = get_git_commit();
         let model_id = report.model["id"].as_str().unwrap_or("unknown");
         let model_params = report.model["parameters_b"].as_f64().unwrap_or(0.0);
-        let ts = chrono::Utc::now().format("%Y%m%d-%H%M%S").to_string();
-        let entry_id = format!("{}-{}-{}", report.benchmark_id, model_id, ts);
+        let pack_id = report.config["pack_id"].as_str().map(|s| s.to_string());
 
-        let entry = CapabilityEntry {
-            id: entry_id.clone(),
+        let entry = ExperimentEntry {
+            experiment_id: experiment_id.clone(),
             timestamp: report.timestamp.clone(),
+            git_commit,
+            ath_version: env!("CARGO_PKG_VERSION").to_string(),
             benchmark_id: report.benchmark_id.clone(),
             benchmark_name: report.benchmark_name.clone(),
+            benchmark_version: "1.0".to_string(),
             model_id: model_id.to_string(),
             model_params,
+            runtime_id: "llama.cpp".to_string(),
+            runtime_version: "0.1".to_string(),
             hardware: report.hardware.clone(),
             level_results: report.levels.clone(),
             total_gain: report.total_gain,
             total_duration_ms: report.total_duration_ms,
+            knowledge_pack_id: pack_id,
             config: report.config.clone(),
-            ath_version: env!("CARGO_PKG_VERSION").to_string(),
         };
 
-        let path = self.base_path.join(format!("{entry_id}.json"));
+        let path = self.base_path.join(format!("{experiment_id}.json"));
         let json = serde_json::to_string_pretty(&entry)?;
         std::fs::write(&path, json)?;
 
-        Ok(entry_id)
+        Ok(experiment_id)
     }
 
-    /// List all persisted certification entries
-    pub fn list(&self) -> anyhow::Result<Vec<CapabilityEntry>> {
+    /// List all experiments (newest first)
+    pub fn list(&self) -> anyhow::Result<Vec<ExperimentEntry>> {
         let mut entries = Vec::new();
-        if !self.base_path.is_dir() {
-            return Ok(entries);
-        }
+        if !self.base_path.is_dir() { return Ok(entries); }
         for entry in std::fs::read_dir(&self.base_path)? {
             let entry = entry?;
             let path = entry.path();
             if path.extension().map(|e| e == "json").unwrap_or(false) {
                 if let Ok(content) = std::fs::read_to_string(&path) {
-                    if let Ok(ce) = serde_json::from_str::<CapabilityEntry>(&content) {
-                        entries.push(ce);
+                    if let Ok(ee) = serde_json::from_str::<ExperimentEntry>(&content) {
+                        entries.push(ee);
                     }
                 }
             }
         }
-        entries.sort_by(|a, b| b.timestamp.cmp(&a.timestamp)); // newest first
+        entries.sort_by(|a, b| b.timestamp.cmp(&a.timestamp));
         Ok(entries)
     }
 
     /// Query: average capability gain for a given benchmark
     pub fn avg_gain(&self, benchmark_id: &str) -> Option<f64> {
         let entries = self.list().ok()?;
-        let relevant: Vec<&CapabilityEntry> = entries.iter()
-            .filter(|e| e.benchmark_id == benchmark_id)
-            .collect();
+        let relevant: Vec<&ExperimentEntry> = entries.iter()
+            .filter(|e| e.benchmark_id == benchmark_id).collect();
         if relevant.is_empty() { return None; }
         let sum: f64 = relevant.iter().map(|e| e.total_gain).sum();
         Some(sum / relevant.len() as f64)
     }
 
-    /// Query: best model for a given benchmark
-    pub fn best_model(&self, benchmark_id: &str) -> Option<CapabilityEntry> {
+    /// Query: best configuration for a given benchmark
+    pub fn best_config(&self, benchmark_id: &str) -> Option<ExperimentEntry> {
         self.list().ok()?.into_iter()
             .filter(|e| e.benchmark_id == benchmark_id)
-            .max_by(|a, b| {
-                a.total_gain.partial_cmp(&b.total_gain).unwrap_or(std::cmp::Ordering::Equal)
-            })
+            .max_by(|a, b| a.total_gain.partial_cmp(&b.total_gain).unwrap_or(std::cmp::Ordering::Equal))
     }
 }
 
@@ -442,7 +622,7 @@ pub struct CertificationReport {
     pub total_duration_ms: f64,
     pub timestamp: String,
     pub config: serde_json::Value,
-    // New fields for experiment tracking
+    pub experiment_id: Option<String>,
     pub experiment: Option<ExperimentMetadata>,
 }
 
@@ -676,7 +856,7 @@ fn run_benchmark_certify_inner(
     json_output: bool,
     mock: bool,
 ) -> anyhow::Result<CertificationReport> {
-    use crate::runtime::{knowledge, Runtime};
+    use crate::runtime::knowledge;
 
     let metadata = runner.metadata();
     let max_level = level.min(metadata.max_level);
@@ -684,24 +864,23 @@ fn run_benchmark_certify_inner(
     let tasks = runner.discover_tasks()
         .map_err(|e| anyhow::anyhow!("Failed to discover tasks: {e}"))?;
 
-    let (model, hw, info) = if mock {
-        // Mock mode: no real model, use placeholder hardware
+    let (hw, info) = if mock {
         let hw = crate::runtime::hardware::detect_hardware();
         let info = crate::runtime::ModelInfo {
             id: "mock-model".to_string(),
-            path: model_path.to_string_lossy().to_string(),
+            path: "mock-model.gguf".to_string(),
             parameters_b: 7.0,
             quantization: "Q4_K_M".to_string(),
             architecture: "Mock".to_string(),
             context_length: 32768,
             hardware: hw.clone(),
         };
-        (model_path.to_path_buf(), hw, info)
+        (hw, info)
     } else {
         let model = crate::runtime::find_model(Some(model_path))?;
         let hw = crate::runtime::hardware::detect_hardware();
         let info = crate::runtime::infer_model_info(&model, Some(&hw));
-        (model, hw, info)
+        (hw, info)
     };
 
     // Build level prompts
@@ -758,7 +937,7 @@ fn run_benchmark_certify_inner(
     let levels_to_run: Vec<BenchmarkLevel> = BenchmarkLevel::all().iter().copied()
         .take((max_level + 1) as usize).collect();
 
-    // Build and start runtime (mock or real)
+    // Build and start executor (mock or inference)
     let cert_start = std::time::Instant::now();
 
     if !json_output {
@@ -773,21 +952,16 @@ fn run_benchmark_certify_inner(
         println!();
     }
 
-    let mut rt: Box<dyn Runtime> = if mock {
-        Box::new(crate::runtime::MockRuntime::new()
-            .with_latency(5.0, 100.0)
-            .with_default_response("Mock response: certification test completed."))
-    } else {
-        let mut builder = crate::runtime::LlamaServerRuntime::new();
-        if let Some(sp) = server_path {
-            builder = builder.with_server_path(sp.to_path_buf());
-        }
-        Box::new(builder)
+    let mut exec_ctx = ExecutionContext {
+        max_tokens,
+        model_path: if mock { None } else { Some(model_path.to_path_buf()) },
+        server_path: server_path.map(|p| p.to_path_buf()),
+        ..Default::default()
     };
 
-    rt.load_model(&model)?;
+    let mut executor: Box<dyn Executor> = resolve_executor(mock, &exec_ctx)?;
 
-    if !json_output { println!("  ✅ Model loaded\n"); }
+    if !json_output { println!("  ✅ Executor ready: {}\n", executor.id()); }
 
     let mut level_results: Vec<LevelResult> = Vec::new();
 
@@ -800,13 +974,12 @@ fn run_benchmark_certify_inner(
         for task in &tasks {
             let prompt = build_level_prompt(&task.prompt, *level);
 
-            let result = crate::runtime::run_benchmark(rt.as_ref(), &prompt, max_tokens);
+            let result = executor.execute(&prompt);
 
             let task_result = match result {
-                Ok(inference) => {
-                    // Use the resolved validator
+                Ok(output) => {
                     let validator = resolve_validator(&task.validation_type);
-                    let v_result = validator.validate(task, &inference.text).unwrap_or_else(|e| {
+                    let v_result = validator.validate(task, &output.text).unwrap_or_else(|e| {
                         ValidationResult::fail("error", &format!("Validation error: {e}"))
                     });
 
@@ -815,11 +988,11 @@ fn run_benchmark_certify_inner(
                         level: *level,
                         passed: v_result.passed,
                         score: v_result.score,
-                        model_output: inference.text.clone(),
+                        model_output: output.text.clone(),
                         match_details: v_result.details,
-                        ttft_ms: inference.ttft_ms,
-                        tokens_per_second: inference.tokens_per_second,
-                        total_tokens: inference.total_tokens,
+                        ttft_ms: output.ttft_ms,
+                        tokens_per_second: output.tokens_per_second,
+                        total_tokens: output.total_tokens,
                     }
                 }
                 Err(e) => BenchmarkTaskResult {
@@ -840,7 +1013,6 @@ fn run_benchmark_certify_inner(
 
         let level_duration = level_start.elapsed().as_secs_f64() * 1000.0;
 
-        // Aggregate with scores
         let passed_count = task_results.iter().filter(|r| r.passed).count();
         let total_count = task_results.len();
         let pass_rate = if total_count > 0 { passed_count as f64 / total_count as f64 } else { 0.0 };
@@ -873,14 +1045,9 @@ fn run_benchmark_certify_inner(
             println!("     Avg TTFT: {:.1}ms | TPS: {:.1}", avg_ttft, avg_tps);
             println!();
         }
-
-        if idx + 1 < levels_to_run.len() {
-            rt.unload()?;
-            rt.load_model(&model)?;
-        }
     }
 
-    rt.unload()?;
+    executor.cleanup()?;
 
     let total_duration = cert_start.elapsed().as_secs_f64() * 1000.0;
 
@@ -905,14 +1072,17 @@ fn run_benchmark_certify_inner(
                 3 => "tools".to_string(),
                 _ => format!("L{max_level}"),
             },
-            metadata.name),            conclusion: Some(if total_gain.abs() < 0.1 {
-                format!("No measurable change ({total_gain:+.1} points)")
-            } else if total_gain > 0.0 {
-                format!("Positive gain: {total_gain:+.1} points — layer added measurable capability")
-            } else {
-                format!("Negative gain: {total_gain:+.1} points — layer may not help this model/benchmark combination")
-            }),
+            metadata.name),
+        conclusion: Some(if total_gain.abs() < 0.1 {
+            format!("No measurable change ({total_gain:+.1} points)")
+        } else if total_gain > 0.0 {
+            format!("Positive gain: {total_gain:+.1} points — layer added measurable capability")
+        } else {
+            format!("Negative gain: {total_gain:+.1} points — layer may not help this model/benchmark combination")
+        }),
     });
+
+    let experiment_id = generate_experiment_id();
 
     let report = CertificationReport {
         benchmark_id: metadata.id.clone(),
@@ -933,20 +1103,21 @@ fn run_benchmark_certify_inner(
             "workspace": workspace_path.map(|p| p.to_string_lossy().to_string()),
             "server_path": server_path.map(|p| p.to_string_lossy().to_string()),
         }),
+        experiment_id: Some(experiment_id.clone()),
         experiment,
     };
 
-    // Persist to capability database
-    let db = CapabilityDatabase::new();
+    // Persist to research database
+    let db = ResearchDatabase::new();
     match db.save(&report) {
-        Ok(entry_id) => {
+        Ok(eid) => {
             if !json_output {
-                println!("  💾 Certification persisted: .state/capabilities/{entry_id}.json");
+                println!("  💾 Experiment saved: .state/experiments/{eid}.json");
             }
         }
         Err(e) => {
             if !json_output {
-                eprintln!("  ⚠ Failed to persist certification: {e}");
+                eprintln!("  ⚠ Failed to persist experiment: {e}");
             }
         }
     }
@@ -1083,7 +1254,7 @@ mod tests {
         let tmp = env::temp_dir().join(format!("ath-test-capdb-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&tmp);
 
-        let db = CapabilityDatabase::with_path(tmp.clone());
+        let db = ResearchDatabase::with_path(tmp.clone());
 
         let report = CertificationReport {
             benchmark_id: "test-bench".into(),
@@ -1097,10 +1268,11 @@ mod tests {
             timestamp: "2026-01-01T00:00:00Z".into(),
             config: serde_json::json!({}),
             experiment: None,
+            experiment_id: None,
         };
 
         let id = db.save(&report).unwrap();
-        assert!(id.contains("test-bench"));
+        assert!(id.starts_with("EXP-"), "Experiment ID should start with EXP-");
 
         let entries = db.list().unwrap();
         assert!(!entries.is_empty());

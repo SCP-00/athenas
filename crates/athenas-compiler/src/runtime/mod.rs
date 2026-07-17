@@ -195,8 +195,9 @@ pub struct ModelInfo {
     pub hardware: hardware::HardwareInfo,
 }
 
-/// Runtime abstraction — implemented per backend
-pub trait Runtime {
+/// Runtime abstraction — implemented per backend.
+/// Must be Send + Sync so it can be used inside Executor implementations.
+pub trait Runtime: Send + Sync {
     fn name(&self) -> &str;
     fn load_model(&mut self, model_path: &Path) -> anyhow::Result<()>;
     fn complete(&self, prompt: &str, params: &InferenceParams) -> anyhow::Result<InferenceResult>;
