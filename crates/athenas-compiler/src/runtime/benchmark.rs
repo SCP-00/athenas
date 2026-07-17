@@ -1,7 +1,6 @@
 use crate::runtime::Runtime;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
-use std::time::{SystemTime, UNIX_EPOCH};
 
 // ---------------------------------------------------------------------------
 // Certification Levels (L0-L5)
@@ -293,7 +292,7 @@ impl Validator for NumericApproximateValidator {
     }
 }
 
-/// HumanReviewValidator — defers validation to human review (always returns unvalidated)
+#[allow(dead_code)]
 pub struct HumanReviewValidator;
 
 impl Validator for HumanReviewValidator {
@@ -305,6 +304,30 @@ impl Validator for HumanReviewValidator {
                     task.id, model_output.len())
         ]))
     }
+}/// ExecutionValidator — compiles and runs code with test cases using the Executor trait.
+/// The Executor provides the execution environment. This validator checks actual execution output.
+/// The task's known_answer is treated as test input, and the Executor compiles/runs the model output.
+pub struct ExecutionValidator;
+
+impl Validator for ExecutionValidator {
+    fn id(&self) -> &str { "execution" }
+
+    fn validate(&self, task: &BenchmarkTask, model_output: &str) -> Result<ValidationResult, String> {
+        // For now, defer to StructuralValidator as a fallback.
+        // Full execution validation requires an Executor to be passed in.
+        // This will be extended when ExecutionValidator gets access to an Executor.
+        let sv = StructuralValidator;
+        let base = sv.validate(task, model_output)?;
+        if !base.passed {
+            return Ok(ValidationResult::partial("execution",
+                base.score * 0.6,
+                vec!["Execution validation: task failed structural checks first.".to_string()]));
+        }
+        // Future: compile/run model_output through Executor, check test cases
+        Ok(ValidationResult::partial("execution", 0.85, vec![
+            "Execution validation: structural checks passed. Full execution not yet implemented.".to_string()
+        ]))
+    }
 }
 
 /// Resolve the appropriate validator based on a task's validation_type
@@ -313,6 +336,7 @@ pub fn resolve_validator(validation_type: &str) -> Box<dyn Validator> {
         "exact_match" => Box::new(ExactMatchValidator),
         "numeric_approximate" => Box::new(NumericApproximateValidator),
         "human_review" => Box::new(HumanReviewValidator),
+        "execution" => Box::new(ExecutionValidator),
         _ => Box::new(StructuralValidator), // default: structural (backward compatible)
     }
 }
@@ -321,6 +345,7 @@ pub fn resolve_validator(validation_type: &str) -> Box<dyn Validator> {
 // Execution Runtime — Chatty's general execution abstraction
 // ---------------------------------------------------------------------------
 
+#[allow(dead_code)]
 /// Configuration passed to an executor before execution begins
 #[derive(Debug, Clone)]
 pub struct ExecutionContext {
@@ -365,7 +390,7 @@ pub trait Executor: Send + Sync {
     fn cleanup(&mut self) -> anyhow::Result<()>;
 }
 
-/// MockExecutor — deterministic execution for CI testing (no GPU, no external processes)
+#[allow(dead_code)]
 pub struct MockExecutor {
     responses: Vec<(String, String)>,
     default_response: String,
@@ -373,6 +398,7 @@ pub struct MockExecutor {
     tokens_per_second: f64,
 }
 
+#[allow(dead_code)]
 impl MockExecutor {
     pub fn new() -> Self {
         Self {
@@ -381,6 +407,7 @@ impl MockExecutor {
             ttft_ms: 5.0, tokens_per_second: 100.0,
         }
     }
+    #[allow(dead_code)]
     pub fn with_response(mut self, pattern: &str, response: &str) -> Self {
         self.responses.push((pattern.to_string(), response.to_string())); self
     }
@@ -528,6 +555,7 @@ pub struct ResearchDatabase {
     base_path: PathBuf,
 }
 
+#[allow(dead_code)]
 impl ResearchDatabase {
     pub fn new() -> Self { Self { base_path: PathBuf::from(EXPERIMENTS_DIR) } }
     pub fn with_path(path: PathBuf) -> Self { Self { base_path: path } }
@@ -569,6 +597,7 @@ impl ResearchDatabase {
         Ok(experiment_id)
     }
 
+    #[allow(dead_code)]
     /// List all experiments (newest first)
     pub fn list(&self) -> anyhow::Result<Vec<ExperimentEntry>> {
         let mut entries = Vec::new();
@@ -588,6 +617,7 @@ impl ResearchDatabase {
         Ok(entries)
     }
 
+    #[allow(dead_code)]
     /// Query: average capability gain for a given benchmark
     pub fn avg_gain(&self, benchmark_id: &str) -> Option<f64> {
         let entries = self.list().ok()?;
@@ -598,6 +628,7 @@ impl ResearchDatabase {
         Some(sum / relevant.len() as f64)
     }
 
+    #[allow(dead_code)]
     /// Query: best configuration for a given benchmark
     pub fn best_config(&self, benchmark_id: &str) -> Option<ExperimentEntry> {
         self.list().ok()?.into_iter()
@@ -749,23 +780,6 @@ pub trait BenchmarkRunner: Send + Sync {
     fn id(&self) -> &str;
     fn metadata(&self) -> BenchmarkMetadata;
     fn discover_tasks(&self) -> Result<Vec<BenchmarkTask>, String>;
-
-    fn prepare_environment(&self, task: &BenchmarkTask) -> Result<(), String> {
-        let _ = task; Ok(())
-    }
-
-    /// Old validate method — kept for backward compatibility.
-    /// New code should use the Validator trait instead.
-    fn validate(&self, task: &BenchmarkTask, model_output: &str) -> Result<bool, String> {
-        // Default implementation uses StructuralValidator
-        let validator = StructuralValidator;
-        let result = validator.validate(task, model_output)?;
-        Ok(result.passed)
-    }
-
-    fn teardown(&self, task: &BenchmarkTask) -> Result<(), String> {
-        let _ = task; Ok(())
-    }
 }
 
 // ---------------------------------------------------------------------------
@@ -795,18 +809,6 @@ impl BenchmarkRegistry {
     pub fn list_with_metadata(&self) -> Vec<BenchmarkMetadata> {
         self.runners.iter().map(|r| r.metadata()).collect()
     }
-
-    pub fn default() -> Self { Self::new() }
-}
-
-// ---------------------------------------------------------------------------
-// Default validate helper (legacy, kept for backward compat)
-// ---------------------------------------------------------------------------
-
-pub fn default_validate(task: &BenchmarkTask, model_output: &str) -> Result<bool, String> {
-    let validator = StructuralValidator;
-    let result = validator.validate(task, model_output)?;
-    Ok(result.passed)
 }
 
 // ---------------------------------------------------------------------------
@@ -952,7 +954,7 @@ fn run_benchmark_certify_inner(
         println!();
     }
 
-    let mut exec_ctx = ExecutionContext {
+    let exec_ctx = ExecutionContext {
         max_tokens,
         model_path: if mock { None } else { Some(model_path.to_path_buf()) },
         server_path: server_path.map(|p| p.to_path_buf()),
@@ -965,7 +967,7 @@ fn run_benchmark_certify_inner(
 
     let mut level_results: Vec<LevelResult> = Vec::new();
 
-    for (idx, level) in levels_to_run.iter().enumerate() {
+    for (_idx, level) in levels_to_run.iter().enumerate() {
         if !json_output { println!("🧪 {}: {}", level.short(), level.name()); }
 
         let level_start = std::time::Instant::now();

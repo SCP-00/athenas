@@ -396,35 +396,12 @@ impl BenchmarkRunner for HumanEvalRunner {
     fn discover_tasks(&self) -> Result<Vec<BenchmarkTask>, String> {
         Ok(Self::tasks())
     }
-
-    fn validate(&self, task: &BenchmarkTask, model_output: &str) -> Result<bool, String> {
-        // Code-level validation: check that required elements are present
-        for required in &task.required_elements {
-            if !model_output.contains(required) {
-                return Err(format!(
-                    "Missing required element '{required}' in output for task {}",
-                    task.id
-                ));
-            }
-        }
-
-        // Check forbidden elements
-        for forbidden in &task.forbidden_elements {
-            if model_output.contains(forbidden) {
-                return Err(format!(
-                    "Contains forbidden element '{forbidden}' in output for task {}",
-                    task.id
-                ));
-            }
-        }
-
-        Ok(true)
-    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::runtime::benchmark::{resolve_validator, Validator, StructuralValidator};
 
     #[test]
     fn test_human_eval_metadata() {
@@ -446,38 +423,38 @@ mod tests {
 
     #[test]
     fn test_validate_passes() {
-        let runner = HumanEvalRunner::new();
-        let tasks = runner.discover_tasks().unwrap();
+        let tasks = HumanEvalRunner::tasks();
         let task = &tasks[0];
 
         // A valid solution should pass
         let valid_output = "def binary_search(arr, target):\n    left, right = 0, len(arr) - 1\n    while left <= right:\n        mid = (left + right) // 2\n        if arr[mid] == target:\n            return mid\n        elif arr[mid] < target:\n            left = mid + 1\n        else:\n            right = mid - 1\n    return -1";
 
-        let result = runner.validate(task, valid_output);
-        assert!(result.is_ok(), "Valid output should pass: {:?}", result.err());
+        let validator = StructuralValidator;
+        let result = validator.validate(task, valid_output).unwrap();
+        assert!(result.passed, "Valid output should pass: {:?}", result.details);
     }
 
     #[test]
     fn test_validate_fails_missing_required() {
-        let runner = HumanEvalRunner::new();
-        let tasks = runner.discover_tasks().unwrap();
+        let tasks = HumanEvalRunner::tasks();
         let task = &tasks[0];
 
         // Missing the function name
         let invalid_output = "print('hello')";
-        let result = runner.validate(task, invalid_output);
-        assert!(result.is_err(), "Missing function name should fail");
+        let validator = resolve_validator(&task.validation_type);
+        let result = validator.validate(task, invalid_output).unwrap();
+        assert!(!result.passed, "Missing function name should fail");
     }
 
     #[test]
     fn test_validate_fails_forbidden() {
-        let runner = HumanEvalRunner::new();
-        let tasks = runner.discover_tasks().unwrap();
+        let tasks = HumanEvalRunner::tasks();
 
         // Task HE-020 forbids .sort() and sorted()
         let task = &tasks[19];
         let output_with_sort = "def valid_anagram(s, t):\n    return sorted(s) == sorted(t)";
-        let result = runner.validate(task, output_with_sort);
-        assert!(result.is_err(), "Using sorted() should fail for HE-020");
+        let validator = resolve_validator(&task.validation_type);
+        let result = validator.validate(task, output_with_sort).unwrap();
+        assert!(!result.passed, "Using sorted() should fail for HE-020");
     }
 }

@@ -1,4 +1,4 @@
-use crate::runtime::benchmark::{
+use crate::runtime::benchmark::{resolve_validator, 
     BenchmarkMetadata, BenchmarkRunner, BenchmarkTask,
 };
 
@@ -1954,31 +1954,6 @@ impl BenchmarkRunner for AiderPolyglotRunner {
         Ok(Self::tasks())
     }
 
-    fn validate(&self, task: &BenchmarkTask, model_output: &str) -> Result<bool, String> {
-        // Structural validation: check that required elements are present
-        for required in &task.required_elements {
-            if !model_output.contains(required) {
-                return Err(format!(
-                    "Missing required element '{required}' in output for task {} ({})",
-                    task.id,
-                    task.description
-                ));
-            }
-        }
-
-        // Check forbidden elements
-        for forbidden in &task.forbidden_elements {
-            if model_output.contains(forbidden) {
-                return Err(format!(
-                    "Contains forbidden element '{forbidden}' in output for task {} ({})",
-                    task.id,
-                    task.description
-                ));
-            }
-        }
-
-        Ok(true)
-    }
 }
 
 #[cfg(test)]
@@ -2038,7 +2013,7 @@ mod tests {
 
         // Valid Python Hello World
         let valid = "def hello(name):\n    if not name:\n        return 'Hello, World!'\n    return f'Hello, {name}!'";
-        assert!(runner.validate(py_task, valid).is_ok());
+        let v_result = resolve_validator("code").validate(py_task, valid).unwrap(); assert!(v_result.passed);
     }
 
     #[test]
@@ -2049,7 +2024,7 @@ mod tests {
 
         // Valid Rust Hello World
         let valid = "pub fn hello(name: Option<&str>) -> String {\n    match name {\n        Some(n) if !n.is_empty() => format!(\"Hello, {n}!\"),\n        _ => \"Hello, World!\".to_string(),\n    }\n}";
-        assert!(runner.validate(rs_task, valid).is_ok());
+        let v_result = resolve_validator("code").validate(rs_task, valid).unwrap(); assert!(v_result.passed);
     }
 
     #[test]
@@ -2060,7 +2035,7 @@ mod tests {
 
         // Valid Go Raindrops — check it passes required elements
         let valid = "package raindrops\n\nfunc Convert(number int) string {\n    var result string\n    if number%3 == 0 { result += \"Pling\" }\n    if number%5 == 0 { result += \"Plang\" }\n    if number%7 == 0 { result += \"Plong\" }\n    if result == \"\" { result = fmt.Sprintf(\"%d\", number) }\n    return result\n}";
-        assert!(runner.validate(go_task, valid).is_ok());
+        let v_result = resolve_validator("code").validate(go_task, valid).unwrap(); assert!(v_result.passed);
     }
 
     #[test]
@@ -2071,7 +2046,7 @@ mod tests {
 
         // Missing std::string
         let bad = "void hello() {}";
-        assert!(runner.validate(task, bad).is_err());
+        let v_result = resolve_validator("code").validate(task, bad).unwrap(); assert!(!v_result.passed);
     }
 
     #[test]
@@ -2082,7 +2057,7 @@ mod tests {
 
         // RS-034 forbids .map()
         let bad = "fn map_function(values: &[T], f: fn(&T) -> U) -> Vec<U> {\n    values.iter().map(f).collect()\n}";
-        assert!(runner.validate(rs_task, bad).is_err());
+        let v_result = resolve_validator("code").validate(rs_task, bad).unwrap(); assert!(!v_result.passed);
     }
 
     #[test]

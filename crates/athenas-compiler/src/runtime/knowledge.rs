@@ -200,6 +200,7 @@ pub fn build_system_prompt(pack: &KnowledgePack, custom_instructions: Option<&st
 // Notice: NO compile() method. Compilation belongs to the compiler.
 // ---------------------------------------------------------------------------
 
+#[allow(dead_code)]
 pub trait KnowledgeProvider {
     fn id(&self) -> &str;
     fn discover(&self, query: &str) -> Result<Vec<KnowledgeSource>, String>;

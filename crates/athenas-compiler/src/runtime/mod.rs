@@ -15,6 +15,7 @@ use std::time::{Duration, Instant};
 // MockRuntime — deterministic inference for CI testing
 // ---------------------------------------------------------------------------
 
+#[allow(dead_code)]
 /// A mock runtime that returns deterministic responses based on prompt matching.
 /// No external processes, no GPU required. Enables full certification pipeline testing in CI.
 pub struct MockRuntime {
@@ -28,6 +29,7 @@ pub struct MockRuntime {
     tokens_per_second: f64,
 }
 
+#[allow(dead_code)]
 impl MockRuntime {
     pub fn new() -> Self {
         Self {
@@ -38,22 +40,26 @@ impl MockRuntime {
         }
     }
 
+    #[allow(dead_code)]
     pub fn with_response(mut self, pattern: &str, response: &str) -> Self {
         self.responses.push((pattern.to_string(), response.to_string()));
         self
     }
 
+    #[allow(dead_code)]
     pub fn with_default_response(mut self, response: &str) -> Self {
         self.default_response = response.to_string();
         self
     }
 
+    #[allow(dead_code)]
     pub fn with_latency(mut self, ttft_ms: f64, tokens_per_second: f64) -> Self {
         self.ttft_ms = ttft_ms;
         self.tokens_per_second = tokens_per_second;
         self
     }
 
+    #[allow(dead_code)]
     fn find_matching_response(&self, prompt: &str) -> &str {
         for (pattern, response) in &self.responses {
             if prompt.contains(pattern) {
@@ -126,6 +132,7 @@ pub struct InferenceResult {
     pub total_duration_ms: f64,
 }
 
+#[allow(dead_code)]
 /// Rich execution result with full metadata (replaces InferenceResult over time)
 #[derive(Debug, Clone, serde::Serialize)]
 pub struct ExecutionResult {

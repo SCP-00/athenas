@@ -18,6 +18,7 @@ pub struct KnowledgeSource {
 pub struct RawKnowledge {
     pub source: KnowledgeSource,
     pub content: String,
+    #[allow(dead_code)]
     pub content_type: String, // "man", "help", "lsp", "html", "json"
 }
 
@@ -108,12 +109,14 @@ pub struct CompileMetrics {
     pub dedup_removed: usize,
 }
 
+#[allow(dead_code)]
 impl KnowledgeIR {
     /// Filter items by kind
     pub fn by_kind(&self, kind: &KnowledgeKind) -> Vec<&KnowledgeItem> {
         self.items.iter().filter(|i| matches!(i.kind, _) && std::mem::discriminant(&i.kind) == std::mem::discriminant(kind)).collect()
     }
 
+    #[allow(dead_code)]
     /// Filter items by language
     pub fn by_language(&self, lang: &str) -> Vec<&KnowledgeItem> {
         self.items.iter().filter(|i| i.language.as_deref() == Some(lang)).collect()
